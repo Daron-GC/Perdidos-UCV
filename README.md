@@ -17,6 +17,9 @@ Esto se debe a que la universidad es un espacio amplio, con múltiples facultade
 
 Además, no solo existe la necesidad de ubicarse académicamente, sino también de resolver aspectos cotidianos, como encontrar opciones económicas de comida o servicios accesibles como fotocopiadoras. Por ello, este público se beneficia directamente de una herramienta que facilite la orientación y proporcione información útil basada en la experiencia de otros estudiantes.
 
+# Funciones core de la aplicación
+
+Entre las funciones indispensables de la app, Perdidos UCV tiene: un sistema de Gps en tiempo real, Un muro de reseñas en el cual se pueden compartir opiniones de los lugares icónicos de la UCV, y todo esto buscando conservar el anonimato, al no necesitar de un login para acceder a sus servicios.
 
 
 
