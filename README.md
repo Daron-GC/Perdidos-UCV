@@ -22,7 +22,7 @@ Además, no solo existe la necesidad de ubicarse académicamente, sino también 
 Entre las funciones indispensables de la app, Perdidos UCV tiene: un sistema de Gps en tiempo real, Un muro de reseñas en el cual se pueden compartir opiniones de los lugares icónicos de la UCV, y todo esto buscando conservar el anonimato, al no necesitar de un login para acceder a sus servicios.
 
 
-#Que no incluye
+# Que no incluye
 
 + Seguimiento de terceros en tiempo real:
 No se implementará el seguimiento de otros usuarios en tiempo real ni funcionalidades tipo red social en vivo.
@@ -37,7 +37,7 @@ No se implementará el seguimiento de otros usuarios en tiempo real ni funcional
 
 
 
-#Valor para la comunidad
+# Valor para la comunidad
 
 Facilitación de la adaptación universitaria: La aplicación ayuda a los estudiantes de nuevo ingreso de la Universidad Central de Venezuela a ubicarse dentro del campus, reduciendo la desorientación y la dependencia de terceros.
 
@@ -49,7 +49,7 @@ Fomento de la interacción indirecta: A través de las reseñas, los usuarios pu
 
 
 
-#Stack tecnológico
+# Stack tecnológico
 
 El desarrollo de Perdidos-UCV se basa en un stack tecnológico enfocado en la simplicidad y funcionalidad.
 
