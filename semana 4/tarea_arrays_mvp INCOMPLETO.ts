@@ -93,3 +93,106 @@ const nombresActivos = Ubicaciones0
   .filter(index => index.Selección === true)
   .map(index => index.name)
 console.log("B5. Nombres activos:", nombresActivos)
+
+// bloque de comentarios
+type TypeName0 =| "Plaza Techada"| "Trasbordo"| "Ing. de Petroleo"| "FACES"| "EEPA"| "Tu úbicación" | "Facultad de Arquitectura y Urbanismo"
+
+type tipo_de_comentario = "normal" | "destacado"
+
+// Interfaces
+interface reacciones {
+  likes: number
+}
+
+interface comentario {
+  id: number
+  comentario: string
+  hora_y_fecha_de_publicacion: string
+  tipodecomentario: tipo_de_comentario
+  reacciones: reacciones
+}
+
+interface ubicacion_info {
+  coordenadasXyY: number[]
+  nombre_de_la_ubicacion: TypeName0
+  calificacion: number
+  horario: string[]
+  esta_abierto: boolean
+  comentario: comentario[]
+}
+
+// Array de datos
+const ubication: ubicacion_info[] = [
+  {
+    coordenadasXyY: [-34.603722, -58.381592],
+    nombre_de_la_ubicacion: "Plaza Techada",
+    calificacion: 4.5,
+    horario: ["10am - 8pm"],
+    esta_abierto: true,
+    comentario: [
+      {
+        id: 1,
+        comentario: "Excelente lugar para estudiar y relajarse.",
+        hora_y_fecha_de_publicacion: "2024-06-01T14:30:00Z",
+        tipodecomentario: "destacado",
+        reacciones: {
+          likes: 120
+        }
+      }
+    ]
+  },
+
+  {
+    coordenadasXyY: [-34.609722, -58.381592],
+    nombre_de_la_ubicacion: "Trasbordo",
+    calificacion: 4.0,
+    horario: ["9am - 6pm"],
+    esta_abierto: false,
+    comentario: [
+      {
+        id: 2,
+        comentario: "Buen lugar para tomar un café y trabajar.",
+        hora_y_fecha_de_publicacion: "2024-06-02T10:15:00Z",
+        tipodecomentario: "normal",
+        reacciones: {
+          likes: 80
+        }
+      }
+    ]
+  }
+]
+
+// B1
+const activos = ubication.filter(
+  (lugar) => lugar.esta_abierto
+)
+
+console.log("B1. Activos:", activos.length)
+
+// B2
+const nombres = ubication.map(
+  (lugar) => lugar.nombre_de_la_ubicacion
+)
+
+console.log("B2. Nombres:", nombres)
+
+// B3
+const elemento = ubication.find(
+  (lugar) => lugar.nombre_de_la_ubicacion === "FACES"
+)
+
+console.log("B3. Encontrado:", elemento)
+
+// B4
+const tieneHorario = ubication[0].horario.includes("10am - 8pm")
+
+console.log("B4. Tiene horario:", tieneHorario)
+
+// B5
+const nombresActivos = ubication
+  .filter((lugar) => lugar.esta_abierto)
+  .map((lugar) => lugar.nombre_de_la_ubicacion)
+
+console.log("B5. Nombres activos:", nombresActivos)
+
+
