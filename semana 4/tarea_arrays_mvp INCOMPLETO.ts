@@ -95,7 +95,6 @@ const nombresActivos = Ubicaciones0
 console.log("B5. Nombres activos:", nombresActivos)
 
 // bloque de comentarios
-type TypeName0 =| "Plaza Techada"| "Trasbordo"| "Ing. de Petroleo"| "FACES"| "EEPA"| "Tu úbicación" | "Facultad de Arquitectura y Urbanismo"
 
 type tipo_de_comentario = "normal" | "destacado"
 
