@@ -1,43 +1,23 @@
-"use client";
+"use client"
+import { useState } from 'react'
+import { createClient } from '../../lib/supabase'
+import Link from 'next/link'
 
-import Link from "next/link";
-import { useState } from "react";
-import { supabase } from "@/lib/supabase";
-import { useRouter } from "next/navigation";
-
-export default function Register() {
-  const router = useRouter();
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
-  const [confirmPassword, setConfirmPassword] = useState("");
+export default function Registro() {
+  const [email, setEmail] = useState("")
+  const [pass, setPass] = useState('')
   const [showPassword, setShowPassword] = useState(false);
+  const [confirmPassword, setConfirmPassword] = useState("");
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
 
-  const handleRegister = async () => {
-  if (!email || !password) return;
-
-  const { data, error: signUpError } = await supabase.auth.signUp({
-    email,
-    password,
-  });
-
-  if (signUpError) {
-    console.log(signUpError.message);
-    return;
+  async function registrar() {
+    const supabase = createClient()
+    const { error } = await supabase.auth.signUp({
+      email, password: pass
+    })
+    if (error) alert(error.message)
+    else alert('¡Cuenta creada!')
   }
-
-  const { error: profileError } = await supabase
-    .from("profiles")
-    .insert({ email: data.user?.email, user_id: data.user?.id });
-
-  if (profileError) {
-    console.log("Error al crear perfil:");
-    // Aquí podrías decidir si quieres eliminar el usuario recién creado o manejarlo de otra forma.
-  }
-
-  
-  router.push("/");
-};
 
   return (
     <div className="bg-[#F8F9FD] min-h-screen flex flex-col justify-center items-center relative overflow-hidden">
@@ -94,8 +74,8 @@ export default function Register() {
             <input
               type={showPassword ? "text" : "password"}
               placeholder="Contraseña"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
+              value={pass}
+              onChange={(e) => setPass(e.target.value)}
               className="w-full py-3.5 pl-12 pr-12 bg-white border border-gray-100 rounded-2xl outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-50 shadow-sm transition-all placeholder-gray-400"
             />
             <button
@@ -143,7 +123,7 @@ export default function Register() {
           </div>
 
           <button
-            onClick={handleRegister}
+            onClick={registrar}
             className="relative w-full mt-2 bg-[#007BFF] text-white font-bold italic tracking-wide text-lg py-3.5 rounded-2xl shadow-md hover:bg-[#0069d9] transition-all active:scale-[0.98] flex items-center justify-center"
           >
             CREAR CUENTA

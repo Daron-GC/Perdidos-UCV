@@ -1,31 +1,24 @@
-"use client";
-
-import Link from "next/link";
-import { useState } from "react";
-import { useRouter } from "next/navigation";
-import { supabase } from "@/lib/supabase";
+'use client'
+import { useState } from 'react'
+import { useRouter } from 'next/navigation'
+import { createClient } from '../lib/supabase'
+import Link from 'next/link'
 
 export default function Login() {
-  const router = useRouter();
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
+  const [email, setEmail] = useState('')
+  const [pass, setPass] = useState('')
   const [showPassword, setShowPassword] = useState(false);
+  const router = useRouter()
 
-  const handleLogin = async () => {
-  if (!email || !password) return;
-
-  const { data, error } = await supabase.auth.signInWithPassword({
-    email,
-    password,
-  });
-
-  if (error) {
-    console.log(error.message);
-    return;
+  async function login() {
+    const supabase = createClient()
+    const { error } = await supabase.auth.signInWithPassword({
+      email, password: pass
+    })
+    if (error) alert(error.message)
+    else router.push('/dashboard')  
   }
 
-  router.push("/desarrollo");
-};
 
   return (
     <div className="bg-[#F8F9FD] min-h-screen flex items-center justify-center p-4">
@@ -63,8 +56,8 @@ export default function Login() {
             <input
               type={showPassword ? "text" : "password"}
               placeholder="Contraseña"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
+              value={pass}
+              onChange={(e) => setPass(e.target.value)}
               className="w-full bg-[#F9F9F9] border border-gray-100 text-gray-800 rounded-2xl py-4 pl-14 pr-12 outline-none focus:border-blue-400 transition"
             />
             <button
@@ -85,9 +78,9 @@ export default function Login() {
             </button>
           </div>
 
-          <Link href="/desarrollo" className="w-full bg-[#007BFF] text-white text-xl font-bold py-4 rounded-2xl shadow-lg hover:bg-blue-600 active:scale-[0.98] transition-all flex items-center justify-center gap-2">
+          <button onClick={login} className="w-full bg-[#007BFF] text-white text-xl font-bold py-4 rounded-2xl shadow-lg hover:bg-blue-600 active:scale-[0.98] transition-all flex items-center justify-center gap-2">
             INGRESAR
-          </Link>
+          </button>
 
           <div className="text-center mt-6">
             <p className="text-gray-500 font-medium">¿No tienes cuenta?</p>
