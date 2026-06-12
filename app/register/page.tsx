@@ -12,32 +12,49 @@ export default function Register() {
   const [confirmPassword, setConfirmPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
 
   const handleRegister = async () => {
-  if (!email || !password) return;
+    if (!email || !password || !confirmPassword) {
+      alert("Completa todos los campos");
+      return;
+    }
+    if (password !== confirmPassword) {
+      alert("Las contraseñas no coinciden");
+      return;
+    }
 
-  const { data, error: signUpError } = await supabase.auth.signUp({
-    email,
-    password,
-  });
+    setIsLoading(true);
+    const { data, error: signUpError } = await supabase.auth.signUp({
+      email,
+      password,
+    });
+    setIsLoading(false);
 
-  if (signUpError) {
-    console.log(signUpError.message);
-    return;
-  }
+    if (signUpError) {
+      alert(signUpError.message);
+      return;
+    }
 
-  const { error: profileError } = await supabase
-    .from("profiles")
-    .insert({ email: data.user?.email, user_id: data.user?.id });
+    if (data.user) {
+      // Intenta crear perfil en tabla "profiles" si existe
+      const { error: profileError } = await supabase
+        .from("profiles")
+        .insert({ email: data.user.email, user_id: data.user.id });
+      if (profileError) {
+        console.error("Error al crear perfil:", profileError);
+        // No detenemos el flujo, el usuario ya fue creado
+      }
 
-  if (profileError) {
-    console.log("Error al crear perfil:");
-    // Aquí podrías decidir si quieres eliminar el usuario recién creado o manejarlo de otra forma.
-  }
-
-  
-  router.push("/");
-};
+      // Si la sesión se inicia automáticamente (sin confirmación de email)
+      if (data.session) {
+        router.push("/desarrollo");
+      } else {
+        alert("Revisa tu correo para confirmar la cuenta. Luego inicia sesión.");
+        router.push("/");
+      }
+    }
+  };
 
   return (
     <div className="bg-[#F8F9FD] min-h-screen flex flex-col justify-center items-center relative overflow-hidden">
@@ -144,9 +161,10 @@ export default function Register() {
 
           <button
             onClick={handleRegister}
-            className="relative w-full mt-2 bg-[#007BFF] text-white font-bold italic tracking-wide text-lg py-3.5 rounded-2xl shadow-md hover:bg-[#0069d9] transition-all active:scale-[0.98] flex items-center justify-center"
+            disabled={isLoading}
+            className="relative w-full mt-2 bg-[#007BFF] text-white font-bold italic tracking-wide text-lg py-3.5 rounded-2xl shadow-md hover:bg-[#0069d9] transition-all active:scale-[0.98] flex items-center justify-center disabled:opacity-50"
           >
-            CREAR CUENTA
+            {isLoading ? "CREANDO CUENTA..." : "CREAR CUENTA"}
             <svg className="btn-lines w-5 h-5 text-white/80" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" d="M12 3v3m4.5-1.5l-2.5 2.5m5.5 2h-3" />
             </svg>

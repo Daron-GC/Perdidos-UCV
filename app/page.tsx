@@ -10,34 +10,36 @@ export default function Login() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
 
   const handleLogin = async () => {
-  if (!email || !password) return;
+    if (!email || !password) {
+      alert("Completa todos los campos");
+      return;
+    }
 
-  const { data, error } = await supabase.auth.signInWithPassword({
-    email,
-    password,
-  });
+    setIsLoading(true);
+    const { error } = await supabase.auth.signInWithPassword({
+      email,
+      password,
+    });
+    setIsLoading(false);
 
-  if (error) {
-    console.log(error.message);
-    return;
-  }
+    if (error) {
+      alert(error.message);
+      return;
+    }
 
-  router.push("/desarrollo");
-};
+    router.push("/desarrollo");
+  };
 
   return (
     <div className="bg-[#F8F9FD] min-h-screen flex items-center justify-center p-4">
       <div className="w-full max-w-sm relative flex flex-col">
-
-        <img src="/IMG-20260531-WA0042.jpg.jpeg" alt="Fondo Decorativo" className="absolute inset-0 z-0" />
-        <div className="absolute top-0 left-0 w-full h-full bg-black/20 z-0"></div>
         <div className="flex justify-center items-center mb-10 z-10">
           <img src="/IMG-20260531-WA0042.jpg.jpeg" alt="Logo Perdidos UCV" className="h-40 w-auto" />
         </div>
 
-        {/* Formulario */}
         <div className="z-10 bg-white p-8 rounded-[40px] shadow-[0_8px_30px_rgb(0,0,0,0.05)]">
           <div className="relative mb-6">
             <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
@@ -85,9 +87,13 @@ export default function Login() {
             </button>
           </div>
 
-          <Link href="/desarrollo" className="w-full bg-[#007BFF] text-white text-xl font-bold py-4 rounded-2xl shadow-lg hover:bg-blue-600 active:scale-[0.98] transition-all flex items-center justify-center gap-2">
-            INGRESAR
-          </Link>
+          <button
+            onClick={handleLogin}
+            disabled={isLoading}
+            className="w-full bg-[#007BFF] text-white text-xl font-bold py-4 rounded-2xl shadow-lg hover:bg-blue-600 active:scale-[0.98] transition-all flex items-center justify-center gap-2 disabled:opacity-50"
+          >
+            {isLoading ? "Cargando..." : "INGRESAR"}
+          </button>
 
           <div className="text-center mt-6">
             <p className="text-gray-500 font-medium">¿No tienes cuenta?</p>

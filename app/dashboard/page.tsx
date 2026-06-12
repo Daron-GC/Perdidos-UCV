@@ -1,7 +1,7 @@
 import { createClient } from '@/utils/supabase/server'
 import { logoutAction } from '../actions'
 import { redirect } from 'next/navigation'
-import ClientMap from '@/components/campus/ClientMap'
+import MapLeaflet from '@/componentes/Mapleaflet'  // ← NUEVO MAPA
 
 export default async function DashboardPage() {
   const supabase = await createClient()
@@ -31,9 +31,9 @@ export default async function DashboardPage() {
           <p className="text-2xl font-extrabold text-[#A158FF] break-all">{user.email}</p>
         </div>
 
-        {/* MAPA en lugar del mensaje de prueba */}
+        {/* MAPA NUEVO con Leaflet */}
         <div className="w-full h-80 rounded-lg overflow-hidden shadow-md">
-          <ClientMap />
+          <MapLeaflet />
         </div>
 
         {/* Cerrar sesión */}
