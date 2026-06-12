@@ -26,16 +26,20 @@ export default function Desarrollo() {
     router.push("/");
   };
 
+  const goToMapa = () => router.push("/mapa");
+  const goToFavoritos = () => router.push("/favoritos");
+  const goToPerfil = () => router.push("/perfil");
+
   if (!user) return <div className="p-4">Verificando sesión...</div>;
 
   return (
     <div className="relative h-screen w-full overflow-hidden">
-      {/* CAPA 1: Mapa de fondo (más abajo de todo) */}
+      {/* Mapa de fondo */}
       <div className="absolute inset-0 z-0">
         <SimpleMap />
       </div>
 
-      {/* CAPA 2: Header superior fijo (sobre el mapa) */}
+      {/* Header superior */}
       <div className="absolute top-0 left-0 right-0 bg-white/90 backdrop-blur-md shadow-md z-10 px-5 py-3 flex justify-between items-center">
         <div className="flex gap-4">
           <span className="font-bold text-[#A158FF] text-lg">¿Qué buscás hoy?</span>
@@ -49,23 +53,31 @@ export default function Desarrollo() {
         </button>
       </div>
 
-      {/* CAPA 3: Barra inferior fija con botones (sobre el mapa) */}
+      {/* Barra inferior con navegación */}
       <div className="absolute bottom-0 left-0 right-0 bg-white/95 backdrop-blur-md border-t border-gray-200 shadow-lg z-10">
         <div className="flex justify-around items-center py-3">
-          <button className="flex flex-col items-center text-purple-600">
+          <button
+            onClick={goToMapa}
+            className="flex flex-col items-center text-gray-500 hover:text-purple-600 transition"
+          >
             <span className="text-2xl">🗺️</span>
             <span className="text-xs mt-1">Mapa</span>
           </button>
-          <button className="flex flex-col items-center text-gray-500">
+          <button
+            onClick={goToFavoritos}
+            className="flex flex-col items-center text-gray-500 hover:text-purple-600 transition"
+          >
             <span className="text-2xl">❤️</span>
             <span className="text-xs mt-1">Favoritos</span>
           </button>
-          <button className="flex flex-col items-center text-gray-500">
+          <button
+            onClick={goToPerfil}
+            className="flex flex-col items-center text-gray-500 hover:text-purple-600 transition"
+          >
             <span className="text-2xl">👤</span>
             <span className="text-xs mt-1">Perfil</span>
           </button>
         </div>
-        {/* Barra blanca (home indicator) */}
         <div className="w-32 h-1 bg-gray-300 rounded-full mx-auto mb-2"></div>
       </div>
     </div>
