@@ -1,7 +1,9 @@
 import { createClient } from '@/utils/supabase/server'
-import { logoutAction } from '../actions'
 import { redirect } from 'next/navigation'
-import MapLeaflet from '@/componentes/Mapleaflet'  // ← NUEVO MAPA
+import dynamic from 'next/dynamic'
+import DashboardSearch from '@/components/campus/DashboardSearch'
+
+const MainMap = dynamic(() => import('@/componentes/MainMap'), { ssr: false })
 
 export default async function DashboardPage() {
   const supabase = await createClient()
@@ -19,29 +21,18 @@ export default async function DashboardPage() {
         <div className="w-12 h-12 border-2 border-white/30 rounded-full mb-2 mr-2"></div>
       </div>
 
-      <div className="w-full max-w-sm flex flex-col items-center relative z-10 px-5 gap-6">
-        {/* Logo */}
-        <div className="flex justify-center mb-4">
-          <img src="/logo-completo.png" alt="Logo" className="h-40 w-auto" />
+      <div className="relative z-10 mx-auto flex max-w-3xl flex-col gap-6 px-5 py-8">
+        <div className="rounded-[2rem] bg-white/95 border border-[#F1E8FF] p-5 shadow-[0_24px_80px_rgba(125,83,199,0.12)]">
+          <div className="text-center mb-4">
+            <h1 className="text-3xl font-black text-[#A158FF] tracking-tight">Bienvenido</h1>
+            <p className="mt-2 text-sm font-semibold text-slate-500">{user.email}</p>
+          </div>
+          <DashboardSearch />
         </div>
 
-        {/* Bienvenida */}
-        <div className="text-center">
-          <h1 className="text-3xl font-bold text-[#A158FF]">Bienvenido</h1>
-          <p className="text-2xl font-extrabold text-[#A158FF] break-all">{user.email}</p>
+        <div className="rounded-[2rem] overflow-hidden shadow-[0_28px_80px_rgba(125,83,199,0.12)]">
+          <MainMap user={user} />
         </div>
-
-        {/* MAPA NUEVO con Leaflet */}
-        <div className="w-full h-80 rounded-lg overflow-hidden shadow-md">
-          <MapLeaflet />
-        </div>
-
-        {/* Cerrar sesión */}
-        <form action={logoutAction} className="w-full mt-4">
-          <button type="submit" className="w-full bg-[#007BFF] text-white font-extrabold italic tracking-wider text-2xl py-4 rounded-3xl shadow-lg hover:bg-[#0069d9] transition-all">
-            CERRAR SESIÓN
-          </button>
-        </form>
       </div>
     </div>
   )

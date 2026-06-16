@@ -1,4 +1,3 @@
-
 "use client";
 
 import { MapContainer, TileLayer } from "react-leaflet";
@@ -11,7 +10,7 @@ const ubicaciones = [
   { id: 4, nombre: "Aula Magna", latitud: 10.4895, longitud: -66.8818 },
 ];
 
-export default function MapLeaflet({
+export default function MainMap({
   user,
   children,
 }: {
@@ -23,6 +22,8 @@ export default function MapLeaflet({
     [10.504, -66.861],
   ];
 
+  const showMarkers = false;
+
   return (
     <MapContainer
       center={[10.491, -66.881]}
@@ -32,7 +33,7 @@ export default function MapLeaflet({
       style={{ height: "100%", width: "100%" }}
     >
       <TileLayer url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" />
-      <Markers ubicaciones={ubicaciones} />
+      {showMarkers && <Markers ubicaciones={ubicaciones} />}
       {children}
     </MapContainer>
   );

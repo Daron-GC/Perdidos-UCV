@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabase";
+import LoadingOverlay from "@/components/LoadingOverlay";
 
 export default function Login() {
   const router = useRouter();
@@ -19,18 +20,24 @@ export default function Login() {
     }
 
     setIsLoading(true);
-    const { error } = await supabase.auth.signInWithPassword({
+
+    const authPromise = supabase.auth.signInWithPassword({
       email,
       password,
     });
-    setIsLoading(false);
+    const delayPromise = new Promise((resolve) => setTimeout(resolve, 2000));
+
+    const { error } = await authPromise;
+    await delayPromise;
 
     if (error) {
+      setIsLoading(false);
       alert(error.message);
       return;
     }
 
-    router.push("/desarrollo");
+    await router.push("/desarrollo");
+    setIsLoading(false);
   };
 
   return (
@@ -92,7 +99,7 @@ export default function Login() {
             disabled={isLoading}
             className="w-full bg-[#007BFF] text-white text-xl font-bold py-4 rounded-2xl shadow-lg hover:bg-blue-600 active:scale-[0.98] transition-all flex items-center justify-center gap-2 disabled:opacity-50"
           >
-            {isLoading ? "Cargando..." : "INGRESAR"}
+            INGRESAR
           </button>
 
           <div className="text-center mt-6">
@@ -105,6 +112,8 @@ export default function Login() {
             </Link>
           </div>
         </div>
+
+        {isLoading && <LoadingOverlay message="Iniciando sesión..." />}
 
         {/* Decoraciones inferiores */}
         <div className="fixed bottom-0 left-0 w-32 h-24 bg-[#74DDD0] rounded-tr-[70px] z-0 opacity-90"></div>

@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useState } from "react";
 import { supabase } from "@/lib/supabase";
 import { useRouter } from "next/navigation";
+import LoadingOverlay from "@/components/LoadingOverlay";
 
 export default function Register() {
   const router = useRouter();
@@ -25,35 +26,55 @@ export default function Register() {
     }
 
     setIsLoading(true);
+    const delayPromise = new Promise((resolve) => setTimeout(resolve, 2000));
     const { data, error: signUpError } = await supabase.auth.signUp({
       email,
       password,
     });
-    setIsLoading(false);
+
+    await delayPromise;
 
     if (signUpError) {
+      setIsLoading(false);
       alert(signUpError.message);
       return;
     }
 
     if (data.user) {
-      // Intenta crear perfil en tabla "profiles" si existe
-      const { error: profileError } = await supabase
-        .from("profiles")
-        .insert({ email: data.user.email, user_id: data.user.id });
-      if (profileError) {
-        console.error("Error al crear perfil:", profileError);
-        // No detenemos el flujo, el usuario ya fue creado
+      try {
+        const { error: profileError } = await supabase
+          .from("profiles")
+          .insert({ email: data.user.email, user_id: data.user.id });
+
+        if (profileError) {
+          const detail = profileError.message || JSON.stringify(profileError);
+          if (!detail?.includes("Could not find the table")) {
+            console.error("Error al crear perfil:", detail);
+          }
+        }
+      } catch (error) {
+        // Si no existe la tabla `profiles`, no rompemos el registro.
+        if (typeof error === "object" && error !== null) {
+          const message =
+            (error as any).message || JSON.stringify(error) || String(error);
+          if (!message.includes("Could not find the table")) {
+            console.error("Error al crear perfil:", message);
+          }
+        }
       }
 
-      // Si la sesión se inicia automáticamente (sin confirmación de email)
       if (data.session) {
-        router.push("/desarrollo");
+        await router.push("/desarrollo");
       } else {
         alert("Revisa tu correo para confirmar la cuenta. Luego inicia sesión.");
-        router.push("/");
+        await router.push("/");
       }
+    } else {
+      alert("Registro exitoso. Revisa tu correo o intenta iniciar sesión.");
+      await router.push("/");
     }
+
+    setIsLoading(false);
   };
 
   return (
@@ -164,7 +185,7 @@ export default function Register() {
             disabled={isLoading}
             className="relative w-full mt-2 bg-[#007BFF] text-white font-bold italic tracking-wide text-lg py-3.5 rounded-2xl shadow-md hover:bg-[#0069d9] transition-all active:scale-[0.98] flex items-center justify-center disabled:opacity-50"
           >
-            {isLoading ? "CREANDO CUENTA..." : "CREAR CUENTA"}
+            CREAR CUENTA
             <svg className="btn-lines w-5 h-5 text-white/80" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" d="M12 3v3m4.5-1.5l-2.5 2.5m5.5 2h-3" />
             </svg>
@@ -180,6 +201,8 @@ export default function Register() {
             </Link>
           </div>
         </div>
+
+        {isLoading && <LoadingOverlay message="Creando tu cuenta..." />}
       </div>
     </div>
   );

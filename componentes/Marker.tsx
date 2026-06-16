@@ -3,7 +3,18 @@
 import { Marker, Popup } from "react-leaflet";
 import { useRouter } from "next/navigation";
 
-export default function Markers({ ubicaciones }: { ubicaciones: any[] }) {
+interface Ubicacion {
+  id: number;
+  nombre: string;
+  latitud: number;
+  longitud: number;
+}
+
+export default function Markers({
+  ubicaciones,
+}: {
+  ubicaciones: Ubicacion[];
+}) {
   const router = useRouter();
 
   function abrirComentarios(id: number) {
@@ -16,18 +27,11 @@ export default function Markers({ ubicaciones }: { ubicaciones: any[] }) {
         <Marker
           key={u.id}
           position={[u.latitud, u.longitud]}
+          eventHandlers={{
+            click: () => abrirComentarios(u.id),
+          }}
         >
-          <Popup>
-            <div>
-              <strong>{u.nombre}</strong>
-              <button
-                onClick={() => abrirComentarios(u.id)}
-                className="ml-2 text-blue-500 underline"
-              >
-                Ver comentarios
-              </button>
-            </div>
-          </Popup>
+          <Popup>{u.nombre}</Popup>
         </Marker>
       ))}
     </>
