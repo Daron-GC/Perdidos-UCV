@@ -4,10 +4,10 @@ import { MapContainer, TileLayer } from "react-leaflet";
 import Markers from "./Marker";
 
 const ubicaciones = [
-  { id: 1, nombre: "Biblioteca Central", latitud: 10.4917, longitud: -66.8812 },
-  { id: 2, nombre: "Facultad de Ciencias", latitud: 10.4930, longitud: -66.8835 },
-  { id: 3, nombre: "Cafetería UCV", latitud: 10.4920, longitud: -66.8790 },
-  { id: 4, nombre: "Aula Magna", latitud: 10.4895, longitud: -66.8818 },
+  { id_de_la_ubicacion: 1, nombre_de_la_ubicacion: "Biblioteca Central", latitud: 10.4917, longitud: -66.8812 },
+  { id_de_la_ubicacion: 2, nombre_de_la_ubicacion: "Facultad de Ciencias", latitud: 10.4930, longitud: -66.8835 },
+  { id_de_la_ubicacion: 3, nombre_de_la_ubicacion: "Cafetería UCV", latitud: 10.4920, longitud: -66.8790 },
+  { id_de_la_ubicacion: 4, nombre_de_la_ubicacion: "Aula Magna", latitud: 10.4895, longitud: -66.8818 },
 ];
 
 export default function MainMap({
@@ -24,6 +24,10 @@ export default function MainMap({
 
   const showMarkers = false;
 
+  const handleSelectUbicacion = (ubicacion: typeof ubicaciones[number]) => {
+    console.log("Ubicación seleccionada:", ubicacion);
+  };
+
   return (
     <MapContainer
       center={[10.491, -66.881]}
@@ -33,7 +37,9 @@ export default function MainMap({
       style={{ height: "100%", width: "100%" }}
     >
       <TileLayer url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" />
-      {showMarkers && <Markers ubicaciones={ubicaciones} />}
+      {showMarkers && (
+        <Markers ubicaciones={ubicaciones} onSelectUbicacion={handleSelectUbicacion} />
+      )}
       {children}
     </MapContainer>
   );

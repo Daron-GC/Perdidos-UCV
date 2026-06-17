@@ -1,21 +1,60 @@
 
 "use client";
 
-import { MapContainer, TileLayer } from "react-leaflet";
-import Markers from "./Marker";
+import { useEffect, useState } from "react";
+import { MapContainer, TileLayer, Marker, Popup, useMap } from "react-leaflet";
+import { LatLngExpression } from "leaflet";
 
-const ubicaciones = [
-  { id: 1, nombre: "Biblioteca Central", latitud: 10.4917, longitud: -66.8812 },
-  { id: 2, nombre: "Facultad de Ciencias", latitud: 10.4930, longitud: -66.8835 },
-  { id: 3, nombre: "Cafetería UCV", latitud: 10.4920, longitud: -66.8790 },
-  { id: 4, nombre: "Aula Magna", latitud: 10.4895, longitud: -66.8818 },
-];
+interface UbicacionSupabase {
+  id_de_la_ubicacion: number;
+  nombre_de_la_ubicacion: string;
+  horarios?: string | null;
+  logitud: number;
+  latitud: number;
+  descripcion?: string | null;
+}
+
+const CENTER: LatLngExpression = [10.4907341, -66.8900546];
+
+function LocationTracker() {
+  const map = useMap();
+  const [position, setPosition] = useState<LatLngExpression | null>(null);
+
+  useEffect(() => {
+    if (!navigator.geolocation) return;
+
+    const watchId = navigator.geolocation.watchPosition(
+      (pos) => {
+        const nextPosition: LatLngExpression = [
+          pos.coords.latitude,
+          pos.coords.longitude,
+        ];
+        setPosition(nextPosition);
+        map.flyTo(nextPosition, 17, { duration: 1.2 });
+      },
+      (error) => {
+        console.error("Error obteniendo ubicación:", error);
+      },
+      {
+        enableHighAccuracy: true,
+        maximumAge: 10000,
+        timeout: 15000,
+      }
+    );
+
+    return () => navigator.geolocation.clearWatch(watchId);
+  }, [map]);
+
+  return position ? (
+    <Marker position={position}>
+      <Popup>Tu ubicación actual</Popup>
+    </Marker>
+  ) : null;
+}
 
 export default function MapLeaflet({
-  user,
   children,
 }: {
-  user?: any;
   children?: React.ReactNode;
 }) {
   const bounds: [[number, number], [number, number]] = [
@@ -25,14 +64,14 @@ export default function MapLeaflet({
 
   return (
     <MapContainer
-      center={[10.491, -66.881]}
+      center={CENTER}
       zoom={16}
       maxBounds={bounds}
       maxBoundsViscosity={1.0}
       style={{ height: "100%", width: "100%" }}
     >
       <TileLayer url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" />
-      <Markers ubicaciones={ubicaciones} />
+      <LocationTracker />
       {children}
     </MapContainer>
   );

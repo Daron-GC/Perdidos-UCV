@@ -1,37 +1,42 @@
 "use client";
 
 import { Marker, Popup } from "react-leaflet";
-import { useRouter } from "next/navigation";
 
 interface Ubicacion {
-  id: number;
-  nombre: string;
+  id_de_la_ubicacion: number;
+  nombre_de_la_ubicacion: string;
+  horarios?: string | null;
   latitud: number;
   longitud: number;
+  descripcion?: string | null;
 }
 
 export default function Markers({
   ubicaciones,
+  onSelectUbicacion,
 }: {
   ubicaciones: Ubicacion[];
+  onSelectUbicacion: (ubicacion: Ubicacion) => void;
 }) {
-  const router = useRouter();
-
-  function abrirComentarios(id: number) {
-    router.push(`/comentarios/${id}`);
-  }
-
   return (
     <>
       {ubicaciones.map((u) => (
         <Marker
-          key={u.id}
-          position={[u.latitud, u.longitud]}
+          key={u.id_de_la_ubicacion}
+          position={[Number(u.latitud), Number(u.longitud)]}
+          riseOnHover
+          title={u.nombre_de_la_ubicacion}
           eventHandlers={{
-            click: () => abrirComentarios(u.id),
+            click: () => onSelectUbicacion(u),
           }}
         >
-          <Popup>{u.nombre}</Popup>
+          <Popup>
+            <div className="space-y-1">
+              <strong>{u.nombre_de_la_ubicacion}</strong>
+              {u.horarios ? <p>{u.horarios}</p> : null}
+              {u.descripcion ? <p>{u.descripcion}</p> : null}
+            </div>
+          </Popup>
         </Marker>
       ))}
     </>

@@ -6,7 +6,7 @@ import { MapPin } from "lucide-react";
 export default function FAB() {
   const pathname = usePathname();
   const router = useRouter();
-  const handleClick = () => router.push("/desarrollo");
+  const handleClick = () => router.push("/mapa");
 
   const showFab = pathname === "/desarrollo" || pathname?.startsWith("/desarrollo") || pathname === "/mapa" || pathname?.startsWith("/mapa");
 
