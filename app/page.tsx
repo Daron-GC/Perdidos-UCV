@@ -36,7 +36,7 @@ export default function Login() {
       return;
     }
 
-    await router.push("/desarrollo");
+    await router.push("/mapa");
     setIsLoading(false);
   };
 

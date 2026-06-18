@@ -8,12 +8,17 @@ export default function FAB() {
   const router = useRouter();
   const handleClick = () => router.push("/mapa");
 
-  const showFab = pathname === "/desarrollo" || pathname?.startsWith("/desarrollo") || pathname === "/mapa" || pathname?.startsWith("/mapa");
+  const showFab = false;
 
   if (!showFab) return null;
 
   return (
-    <button onClick={handleClick} aria-label="Ir al mapa" className="fab pop-in">
+    <button
+      onClick={handleClick}
+      aria-label="Ir al mapa"
+      className="fab pop-in"
+      tabIndex={-1}
+    >
       <MapPin size={28} />
     </button>
   );

@@ -1,38 +1,104 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useEffect, useRef, useState } from "react";
 import MapLeaflet from "@/componentes/Mapleaflet";
 import { supabase } from "@/lib/supabase";
 import Markers from "@/componentes/Marker";
 
+const FALLBACK_UBICACIONES = [
+  {
+    idx: 0,
+    id_de_la_ubicacion: 1,
+    horarios: "7:00 am , 7:00pm",
+    descripcion: "Facultad de arquitectura de la ucv ",
+    nombre_de_la_ubicacion: "Facultad de Arquitectura y Urbanismo ",
+    latitud: 10.4899653376888,
+    longitud: -66.8874361002191,
+  },
+  {
+    idx: 1,
+    id_de_la_ubicacion: 2,
+    horarios: "7:00am 7:00pm",
+    descripcion: "increible ",
+    nombre_de_la_ubicacion: "ciclo básico de  ingeniería ",
+    latitud: 10.4903165443207,
+    longitud: -66.8886954009572,
+  },
+  {
+    idx: 2,
+    id_de_la_ubicacion: 3,
+    horarios: "7:00am 7:00pm",
+    descripcion: "Narnia ",
+    nombre_de_la_ubicacion: "Facultad de ciencias ",
+    latitud: 10.4857008822901,
+    longitud: -66.8909312764693,
+  },
+];
+
 export default function MapPage() {
   const [search, setSearch] = useState("");
-  const [ubicaciones, setUbicaciones] = useState<any[]>([]);
+  const [ubicaciones, setUbicaciones] = useState<any[]>(FALLBACK_UBICACIONES);
   const [selectedUbicacion, setSelectedUbicacion] = useState<any | null>(null);
+  const mapRef = useRef<any>(null);
+
+  const handleCenterOnUser = () => {
+    if (!navigator.geolocation) return;
+
+    navigator.geolocation.getCurrentPosition(
+      (position) => {
+        if (!mapRef.current) return;
+
+        mapRef.current.flyTo(
+          [position.coords.latitude, position.coords.longitude],
+          17,
+          { duration: 1.2 }
+        );
+      },
+      (error) => {
+        console.error("Error centrándose en la ubicación:", error);
+      },
+      {
+        enableHighAccuracy: true,
+        timeout: 15000,
+        maximumAge: 10000,
+      }
+    );
+  };
 
   useEffect(() => {
     async function cargarUbicaciones() {
-      const { data, error } = await supabase
-        .from("ubicaciones")
-        .select(
-          "id_de_la_ubicacion, nombre_de_la_ubicacion, horarios, logitud, latitud, descripcion"
+      try {
+        const { data, error } = await supabase
+          .from("ubicaciones")
+          .select(
+            "id_de_la_ubicacion, nombre_de_la_ubicacion, horarios, logitud, latitud, descripcion"
+          );
+
+        if (error) {
+          setUbicaciones(FALLBACK_UBICACIONES);
+          return;
+        }
+
+        const datosFormateados = (data || [])
+          .map((item: any) => ({
+            id_de_la_ubicacion: item.id_de_la_ubicacion,
+            nombre_de_la_ubicacion: item.nombre_de_la_ubicacion,
+            horarios: item.horarios,
+            longitud: Number(item.logitud ?? item.longitud),
+            latitud: Number(item.latitud),
+            descripcion: item.descripcion,
+          }))
+          .filter(
+            (item) =>
+              Number.isFinite(item.longitud) && Number.isFinite(item.latitud)
+          );
+
+        setUbicaciones(
+          datosFormateados.length > 0 ? datosFormateados : FALLBACK_UBICACIONES
         );
-
-      if (error) {
-        console.error(error);
-        return;
+      } catch (error) {
+        setUbicaciones(FALLBACK_UBICACIONES);
       }
-
-      const datosFormateados = (data || []).map((item: any) => ({
-        id_de_la_ubicacion: item.id_de_la_ubicacion,
-        nombre_de_la_ubicacion: item.nombre_de_la_ubicacion,
-        horarios: item.horarios,
-        longitud: Number(item.logitud),
-        latitud: Number(item.latitud),
-        descripcion: item.descripcion,
-      }));
-
-      setUbicaciones(datosFormateados);
     }
 
     cargarUbicaciones();
@@ -41,7 +107,11 @@ export default function MapPage() {
   return (
     <div className="relative mx-auto max-w-md h-[900px] bg-[#eef5f3] overflow-hidden font-sans shadow-2xl rounded-[40px] border border-gray-200">
       <div className="absolute inset-0 z-0">
-        <MapLeaflet>
+        <MapLeaflet
+          onMapReady={(map) => {
+            mapRef.current = map;
+          }}
+        >
           <Markers
             ubicaciones={ubicaciones}
             onSelectUbicacion={setSelectedUbicacion}
@@ -113,21 +183,13 @@ export default function MapPage() {
 
       <div className="absolute bottom-32 right-5 z-20 flex flex-col gap-3 pointer-events-auto">
         <button
-          aria-label="Ubicación"
-          className="w-14 h-14 bg-white rounded-2xl shadow-[0_5px_15px_rgba(0,0,0,0.1)] flex items-center justify-center text-gray-800 hover:bg-gray-50 transition-colors"
+          aria-label="Centrar ubicación"
+          onClick={handleCenterOnUser}
+          className="w-14 h-14 bg-white rounded-2xl shadow-[0_5px_15px_rgba(0,0,0,0.1)] flex items-center justify-center text-gray-800 hover:bg-gray-50 active:scale-95 active:bg-cyan-50 transition-all duration-200 ease-out"
         >
           <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth="2" stroke="currentColor" className="w-6 h-6">
             <path strokeLinecap="round" strokeLinejoin="round" d="M15 10.5a3 3 0 1 1-6 0 3 3 0 0 1 6 0Z" />
             <path strokeLinecap="round" strokeLinejoin="round" d="M19.5 10.5c0 7.142-7.5 11.25-7.5 11.25S4.5 17.642 4.5 10.5a7.5 7.5 0 1 1 15 0Z" />
-          </svg>
-        </button>
-
-        <button
-          aria-label="Capas"
-          className="w-14 h-14 bg-white rounded-2xl shadow-[0_5px_15px_rgba(0,0,0,0.1)] flex items-center justify-center text-gray-800 hover:bg-gray-50 transition-colors"
-        >
-          <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth="2" stroke="currentColor" className="w-6 h-6">
-            <path strokeLinecap="round" strokeLinejoin="round" d="M9 6.75V15m6-6v8.25m.503 3.498 4.875-2.437c.381-.19.622-.58.622-1.006V4.82c0-.836-.88-1.38-1.628-1.006l-3.869 1.934c-.317.159-.69.159-1.006 0L9.503 3.252a1.125 1.125 0 0 0-1.006 0L3.622 5.689C3.24 5.88 3 6.27 3 6.695V19.18c0 .836.88 1.38 1.628 1.006l3.869-1.934c.317-.159.69-.159 1.006 0l4.994 2.497c.317.158.69.158 1.006 0Z" />
           </svg>
         </button>
       </div>

@@ -19,7 +19,7 @@ export default function BottomNav() {
 
   return (
     <div className="fixed bottom-0 left-0 right-0 bg-white/95 backdrop-blur-md border-t border-gray-200 flex justify-around items-center py-3 z-50 comic-font">
-      <button onClick={() => handleNav("/desarrollo")} className={`flex flex-col items-center p-2 pop ${isActive("/desarrollo") ? "text-[#7D53C7] nav-active" : "text-gray-500"}`}>
+      <button onClick={() => handleNav("/mapa")} className={`flex flex-col items-center p-2 pop ${isActive("/mapa") ? "text-[#7D53C7] nav-active" : "text-gray-500"}`}>
         <div className="w-10 h-10 flex items-center justify-center rounded-full bg-gradient-to-br from-[#A158FF] to-[#7D53C7] text-white comic-shadow">
           <Map size={20} />
         </div>

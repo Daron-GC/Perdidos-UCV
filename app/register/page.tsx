@@ -64,7 +64,7 @@ export default function Register() {
       }
 
       if (data.session) {
-        await router.push("/desarrollo");
+        await router.push("/mapa");
       } else {
         alert("Revisa tu correo para confirmar la cuenta. Luego inicia sesión.");
         await router.push("/");

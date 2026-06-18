@@ -24,7 +24,7 @@ export default function MainMap({
 
   const showMarkers = false;
 
-  const handleSelectUbicacion = (ubicacion: typeof ubicaciones[number]) => {
+  const handleSelectUbicacion = (ubicacion: any) => {
     console.log("Ubicación seleccionada:", ubicacion);
   };
 
