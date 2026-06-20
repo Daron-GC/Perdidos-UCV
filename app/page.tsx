@@ -21,23 +21,38 @@ export default function Login() {
 
     setIsLoading(true);
 
-    const authPromise = supabase.auth.signInWithPassword({
-      email,
-      password,
-    });
-    const delayPromise = new Promise((resolve) => setTimeout(resolve, 2000));
+    try {
+      const { error: authError } = await supabase.auth.signInWithPassword({
+        email,
+        password,
+      });
 
-    const { error } = await authPromise;
-    await delayPromise;
+      if (!authError) {
+        await router.push("/mapa");
+        setIsLoading(false);
+        return;
+      }
 
-    if (error) {
+      const { data: usuarioData, error: usuarioError } = await supabase
+        .from("usuario")
+        .select("id, email, password")
+        .eq("email", email)
+        .eq("password", password)
+        .maybeSingle();
+
+      if (usuarioError || !usuarioData) {
+        alert("Correo o contraseña incorrectos.");
+        setIsLoading(false);
+        return;
+      }
+
+      await router.push("/mapa");
+    } catch (error) {
+      console.error("Error al iniciar sesión:", error);
+      alert("Ocurrió un error al iniciar sesión.");
+    } finally {
       setIsLoading(false);
-      alert(error.message);
-      return;
     }
-
-    await router.push("/mapa");
-    setIsLoading(false);
   };
 
   return (

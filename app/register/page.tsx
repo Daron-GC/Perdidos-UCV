@@ -42,24 +42,26 @@ export default function Register() {
 
     if (data.user) {
       try {
-        const { error: profileError } = await supabase
-          .from("profiles")
-          .insert({ email: data.user.email, user_id: data.user.id });
+        const { error: usuarioError } = await supabase
+          .from("usuario")
+          .insert([
+            {
+              email: data.user.email ?? email,
+              password,
+            },
+          ]);
 
-        if (profileError) {
-          const detail = profileError.message || JSON.stringify(profileError);
-          if (!detail?.includes("Could not find the table")) {
-            console.error("Error al crear perfil:", detail);
-          }
+        if (usuarioError) {
+          console.error("Error al guardar usuario:", usuarioError.message);
+          alert(
+            "La cuenta se creó, pero hubo un problema al guardar el registro en la tabla usuario."
+          );
         }
       } catch (error) {
-        // Si no existe la tabla `profiles`, no rompemos el registro.
         if (typeof error === "object" && error !== null) {
           const message =
             (error as any).message || JSON.stringify(error) || String(error);
-          if (!message.includes("Could not find the table")) {
-            console.error("Error al crear perfil:", message);
-          }
+          console.error("Error al guardar usuario:", message);
         }
       }
 

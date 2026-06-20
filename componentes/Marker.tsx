@@ -4,11 +4,13 @@ import { divIcon } from "leaflet";
 import { Marker, Popup } from "react-leaflet";
 
 interface Ubicacion {
-  id_de_la_ubicacion: number;
-  nombre_de_la_ubicacion: string;
+  id?: number;
+  id_de_la_ubicacion?: number;
+  nombre_ubicacion?: string;
+  nombre_de_la_ubicacion?: string;
   horarios?: string | null;
   latitud: number;
-  longitud?: number;
+  longitud: number;
   logitud?: number;
   descripcion?: string | null;
 }
@@ -51,25 +53,27 @@ export default function Markers({
       {ubicaciones.map((u) => {
         const lat = Number(u.latitud);
         const lng = Number(u.longitud ?? u.logitud);
+        const ubicacionId = u.id ?? u.id_de_la_ubicacion;
+        const ubicacionName = u.nombre_ubicacion || u.nombre_de_la_ubicacion || "Ubicación";
 
-        if (!Number.isFinite(lat) || !Number.isFinite(lng)) {
+        if (!Number.isFinite(lat) || !Number.isFinite(lng) || !ubicacionId) {
           return null;
         }
 
         return (
           <Marker
-            key={u.id_de_la_ubicacion}
+            key={ubicacionId}
             position={[lat, lng]}
             icon={createDecorativeIcon()}
             riseOnHover
-            title={u.nombre_de_la_ubicacion}
+            title={ubicacionName}
             eventHandlers={{
               click: () => onSelectUbicacion?.(u),
             }}
           >
             <Popup>
               <div className="space-y-1">
-                <strong>{u.nombre_de_la_ubicacion}</strong>
+                <strong>{ubicacionName}</strong>
                 {u.horarios ? <p>{u.horarios}</p> : null}
                 {u.descripcion ? <p>{u.descripcion}</p> : null}
               </div>

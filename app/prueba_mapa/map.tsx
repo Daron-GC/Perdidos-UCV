@@ -1,31 +1,32 @@
 "use client";
 
+export const dynamic = "force-dynamic";
+
 import { useEffect, useMemo, useState } from "react";
 import MapLeaflet from "../../componentes/Mapleaflet";
 import { supabase } from "../../lib/supabase";
 import Markers from "../../componentes/Marker";
 
-interface UbicacionDTO {
-  id_de_la_ubicacion: number;
+interface UbicacionMapa {
+  id_de_la_ubicacion?: number;
   nombre_de_la_ubicacion: string;
   horarios?: string | null;
-  logitud?: number | null;
-  longitud?: number | null;
-  latitud?: number | null;
+  longitud: number;
+  latitud: number;
   descripcion?: string | null;
 }
 
 export default function MapPage() {
   const [search, setSearch] = useState("");
-  const [ubicaciones, setUbicaciones] = useState<UbicacionDTO[]>([]);
-  const [selectedUbicacion, setSelectedUbicacion] = useState<UbicacionDTO | null>(null);
+  const [ubicaciones, setUbicaciones] = useState<UbicacionMapa[]>([]);
+  const [selectedUbicacion, setSelectedUbicacion] = useState<UbicacionMapa | null>(null);
 
   useEffect(() => {
     async function cargarUbicaciones() {
       const { data, error } = await supabase
         .from("ubicaciones")
         .select(
-          "id_de_la_ubicacion, nombre_de_la_ubicacion, horarios, logitud, longitud, latitud, descripcion"
+          "id_de_la_ubicacion, nombre_de_la_ubicacion, horarios, longitud, latitud, descripcion"
         );
 
       if (error) {
@@ -33,7 +34,22 @@ export default function MapPage() {
         return;
       }
 
-      setUbicaciones((data as UbicacionDTO[]) || []);
+      const ubicacionesNormalizadas = (data || [])
+        .map((item: any) => ({
+          id_de_la_ubicacion: item.id_de_la_ubicacion,
+          nombre_de_la_ubicacion: item.nombre_de_la_ubicacion,
+          horarios: item.horarios,
+          logitud: Number(item.logitud ?? item.longitud),
+          longitud: Number(item.longitud ?? item.logitud),
+          latitud: Number(item.latitud),
+          descripcion: item.descripcion,
+        }))
+        .filter(
+          (item) =>
+            Number.isFinite(item.latitud) && Number.isFinite(item.longitud)
+        );
+
+      setUbicaciones(ubicacionesNormalizadas);
     }
 
     cargarUbicaciones();
@@ -54,7 +70,18 @@ export default function MapPage() {
         <MapLeaflet>
           <Markers
             ubicaciones={ubicacionesFiltradas}
-            onSelectUbicacion={setSelectedUbicacion}
+            onSelectUbicacion={(ubicacion) => {
+              if (!ubicacion.nombre_de_la_ubicacion) return;
+
+              setSelectedUbicacion({
+                id_de_la_ubicacion: ubicacion.id_de_la_ubicacion ?? 0,
+                nombre_de_la_ubicacion: ubicacion.nombre_de_la_ubicacion,
+                horarios: ubicacion.horarios,
+                longitud: ubicacion.longitud,
+                latitud: ubicacion.latitud,
+                descripcion: ubicacion.descripcion,
+              });
+            }}
           />
         </MapLeaflet>
       </div>

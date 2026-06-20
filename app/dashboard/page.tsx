@@ -1,9 +1,7 @@
 import { createClient } from '@/utils/supabase/server'
 import { redirect } from 'next/navigation'
-import dynamic from 'next/dynamic'
 import DashboardSearch from '@/components/campus/DashboardSearch'
-
-const MainMap = dynamic(() => import('@/componentes/MainMap'), { ssr: false })
+import MainMap from '@/componentes/MainMap'
 
 export default async function DashboardPage() {
   const supabase = await createClient()

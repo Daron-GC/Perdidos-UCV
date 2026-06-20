@@ -1,7 +1,5 @@
 "use client";
 
-import Image from "next/image";
-
 export default function LoadingOverlay({
   message = "Cargando tu experiencia...",
 }: {
@@ -11,12 +9,10 @@ export default function LoadingOverlay({
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-white/95 backdrop-blur-sm">
       <div className="flex flex-col items-center gap-6 rounded-[2rem] border border-[#E9E2FF] bg-white p-8 shadow-[0_24px_80px_rgba(125,83,199,0.16)]">
         <div className="flex h-24 w-24 items-center justify-center rounded-full bg-[#F4EEFF] shadow-inner shadow-[#D8B8FF]/40">
-          <Image
+          <img
             src="/IMG-20260531-WA0042.jpg.jpeg"
             alt="Perdidos UCV"
-            width={76}
-            height={76}
-            className="rounded-full"
+            className="h-[76px] w-[76px] rounded-full object-cover"
           />
         </div>
         <div className="text-center">

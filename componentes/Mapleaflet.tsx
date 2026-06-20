@@ -35,10 +35,24 @@ function LocationTracker() {
           pos.coords.longitude,
         ];
         setPosition(nextPosition);
-        map.flyTo(nextPosition, 17, { duration: 1.2 });
+
+        if (Number.isFinite(nextPosition[0]) && Number.isFinite(nextPosition[1])) {
+          map.flyTo(nextPosition, 17, { duration: 1.2 });
+        }
       },
       (error) => {
-        console.error("Error obteniendo ubicación:", error);
+        const message =
+          error.code === 1
+            ? "Permiso de ubicación denegado."
+            : error.code === 2
+              ? "La ubicación no está disponible en este momento."
+              : error.code === 3
+                ? "Tiempo de espera agotado al obtener la ubicación."
+                : error.message || "No se pudo obtener la ubicación.";
+
+        if (error.code !== 1) {
+          console.warn(`Geolocalización: ${message}`);
+        }
       },
       {
         enableHighAccuracy: true,

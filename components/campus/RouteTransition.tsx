@@ -1,6 +1,5 @@
 "use client";
 
-import Image from "next/image";
 import { useEffect, useState } from "react";
 import { usePathname } from "next/navigation";
 
@@ -28,12 +27,10 @@ export default function RouteTransition() {
     <div className="transition-overlay">
       <div className="transition-card animate-slide-up">
         <div className="transition-avatar">
-          <Image
+          <img
             src="/IMG-20260531-WA0042.jpg.jpeg"
             alt="Perdidos UCV"
-            width={60}
-            height={60}
-            className="rounded-full"
+            className="h-[60px] w-[60px] rounded-full object-cover"
           />
         </div>
         <div className="text-center">

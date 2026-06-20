@@ -1,6 +1,5 @@
 "use client";
 
-import Image from "next/image";
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
@@ -63,19 +62,16 @@ export default function ProfilePage() {
   return (
     <div className="relative min-h-screen bg-gray-100 flex flex-col items-center">
       <div className="w-full max-w-md md:max-w-2xl bg-white shadow-lg rounded-3xl mt-6 mb-24 p-6 md:p-10 flex flex-col items-center entry-card relative">
-        <Image
+        <img
           src="/IMG-20260531-WA0042.jpg.jpeg"
           alt="logo Perdidos UCV"
-          width={220}
-          height={220}
-          priority
-          className="logo-watermark"
+          className="logo-watermark h-[220px] w-[220px]"
         />
 
         {/* Avatar */}
         <div className="flex flex-col items-center pop-in stagger-1">
           <div className="relative">
-            <ProfileAvatar username={username} />
+            <ProfileAvatar username={username} supabase={supabase} />
             <div className="absolute -right-2 -top-2 bubble text-xs">VIP</div>
           </div>
 
@@ -186,8 +182,13 @@ function BottomNav({ active }: { active: string }) {
   );
 }
 
-function ProfileAvatar({ username }: { username: string | null }) {
-  const supabase = createClient();
+function ProfileAvatar({
+  username,
+  supabase,
+}: {
+  username: string | null;
+  supabase: ReturnType<typeof createClient>;
+}) {
   const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
 
   useEffect(() => {
@@ -203,7 +204,7 @@ function ProfileAvatar({ username }: { username: string | null }) {
       }
     }
     load();
-  }, []);
+  }, [supabase]);
 
   const fallback = `https://ui-avatars.com/api/?name=${encodeURIComponent(username ?? "Usuario")}&background=A158FF&color=fff&size=128&bold=true`;
 
