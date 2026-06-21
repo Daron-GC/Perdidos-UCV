@@ -2,7 +2,7 @@
 
 import dynamic from "next/dynamic";
 import { useRouter } from "next/navigation";
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { supabase } from "@/lib/supabase";
 
 const MapLeaflet = dynamic(() => import("@/componentes/Mapleaflet"), {
@@ -58,18 +58,29 @@ export default function MapClient() {
   const [selectedUbicacion, setSelectedUbicacion] = useState<any | null>(null);
   const mapRef = useRef<any>(null);
 
+  const handleMapReady = useCallback((map: any) => {
+    mapRef.current = map;
+  }, []);
+
   const handleCenterOnUser = () => {
-    if (!navigator.geolocation) return;
+    if (!navigator.geolocation || !mapRef.current) return;
 
     navigator.geolocation.getCurrentPosition(
       (position) => {
-        if (!mapRef.current) return;
+        const map = mapRef.current;
+        if (!map || !map.getContainer()) return;
 
-        mapRef.current.flyTo(
-          [position.coords.latitude, position.coords.longitude],
-          17,
-          { duration: 1.2 }
-        );
+        try {
+          map.stop();
+          map.invalidateSize();
+          map.setView(
+            [position.coords.latitude, position.coords.longitude],
+            17,
+            { animate: false }
+          );
+        } catch (error) {
+          console.warn("No se pudo centrar el mapa:", error);
+        }
       },
       (error) => {
         console.error("Error centrándose en la ubicación:", error);
@@ -88,7 +99,7 @@ export default function MapClient() {
         const { data, error } = await supabase
           .from("ubicaciones")
           .select(
-            "id, id_de_la_ubicacion, nombre_ubicacion, nombre_de_la_ubicacion, horarios, longitud, latitud, descripcion"
+            "id, nombre_ubicacion, horarios, longitud, latitud, descripcion"
           );
 
         if (error) {
@@ -98,13 +109,12 @@ export default function MapClient() {
 
         const datosFormateados = (data || [])
           .map((item: any) => ({
-            id: item.id ?? item.id_de_la_ubicacion,
-            id_de_la_ubicacion: item.id_de_la_ubicacion ?? item.id,
-            nombre_ubicacion: item.nombre_ubicacion ?? item.nombre_de_la_ubicacion,
-            nombre_de_la_ubicacion:
-              item.nombre_de_la_ubicacion ?? item.nombre_ubicacion,
+            id: item.id,
+            id_de_la_ubicacion: item.id,
+            nombre_ubicacion: item.nombre_ubicacion,
+            nombre_de_la_ubicacion: item.nombre_ubicacion,
             horarios: item.horarios,
-            longitud: Number(item.longitud ?? item.logitud),
+            longitud: Number(item.longitud),
             latitud: Number(item.latitud),
             descripcion: item.descripcion,
           }))
@@ -130,19 +140,23 @@ export default function MapClient() {
     const nombre = encodeURIComponent(
       ubicacion.nombre_ubicacion || ubicacion.nombre_de_la_ubicacion || ""
     );
-    router.push(
-      `/muro?ubicacionId=${ubicacionId}${nombre ? `&ubicacionNombre=${nombre}` : ""}`
-    );
+    const params = new URLSearchParams();
+
+    if (ubicacionId != null) {
+      params.set("ubicacionId", String(ubicacionId));
+    }
+
+    if (nombre) {
+      params.set("ubicacionNombre", nombre);
+    }
+
+    router.push(`/muro?${params.toString()}`);
   };
 
   return (
     <div className="relative mx-auto max-w-md h-[900px] bg-[#eef5f3] overflow-hidden font-sans shadow-2xl rounded-[40px] border border-gray-200">
       <div className="absolute inset-0 z-0">
-        <MapLeaflet
-          onMapReady={(map) => {
-            mapRef.current = map;
-          }}
-        >
+        <MapLeaflet onMapReady={handleMapReady}>
           <Markers
             ubicaciones={ubicaciones}
             onSelectUbicacion={handleSelectUbicacion}

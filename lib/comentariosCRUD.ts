@@ -6,10 +6,9 @@ export type Comentario = {
   id: number;
   contenido: string;
   user_id?: number | null;
-  verificado?: boolean | null;
-  liked?: boolean | null;
-  username?: string | null;
-  ubicaciones_id?: number | null;
+  like?: boolean | null;
+  destacado?: boolean | null;
+  ubicacion_id?: number | null;
 };
 
 export type Ubicacion = {
@@ -25,7 +24,7 @@ export async function leerComentarios() {
   const { data, error } = await supabase
     .from("comentarios")
     .select(
-      "id, contenido, user_id, verificado, liked, username, ubicaciones_id"
+      "id, contenido, user_id, like, destacado, ubicacion_id"
     )
     .order("id", { ascending: false });
 
@@ -51,19 +50,29 @@ export async function crearComentario(
     throw new Error("La ubicación es obligatoria para publicar.");
   }
 
+  const { data: ubicacionData, error: ubicacionError } = await supabase
+    .from("ubicaciones")
+    .select("id")
+    .eq("id", ubicaciones_id)
+    .maybeSingle();
+
+  if (ubicacionError || !ubicacionData) {
+    throw ubicacionError ?? new Error("No se encontró la ubicación.");
+  }
+
   const { data, error } = await supabase
     .from("comentarios")
     .insert([
       {
         contenido: texto,
-        username,
-        verificado: false,
-        liked: false,
-        ubicaciones_id,
+        user_id: null,
+        like: false,
+        destacado: false,
+        ubicacion_id: ubicaciones_id,
       },
     ])
     .select(
-      "id, contenido, user_id, verificado, liked, username, ubicaciones_id"
+      "id, contenido, user_id, like, destacado, ubicacion_id"
     );
 
   if (error) {
@@ -82,7 +91,7 @@ export async function actualizarComentario(
     .update(cambios)
     .eq("id", id)
     .select(
-      "id, contenido, user_id, verificado, liked, username, ubicaciones_id"
+      "id, contenido, user_id, like, destacado, ubicacion_id"
     );
 
   if (error) {

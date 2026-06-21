@@ -7,6 +7,20 @@ import { LatLngExpression } from "leaflet";
 
 const CENTER: LatLngExpression = [10.4907341, -66.8900546];
 
+function safeStopMap(map: any) {
+  try {
+    if (map?.stop) {
+      map.stop();
+    }
+
+    if (map?._panAnim?.stop) {
+      map._panAnim.stop();
+    }
+  } catch {
+    // Evitar errores si el mapa está en proceso de destrucción.
+  }
+}
+
 function MapReadyHandler({
   onMapReady,
 }: {
@@ -15,8 +29,28 @@ function MapReadyHandler({
   const map = useMap();
 
   useEffect(() => {
-    onMapReady?.(map);
-  }, [map, onMapReady]);
+    if (!map || !map.getContainer()) return;
+
+    const container = map.getContainer();
+    if (!container) return;
+
+    const handleReady = () => {
+      requestAnimationFrame(() => {
+        try {
+          if (container.isConnected) {
+            map.invalidateSize();
+          }
+        } catch {}
+        onMapReady?.(map);
+      });
+    };
+
+    map.whenReady(handleReady);
+
+    return () => {
+      safeStopMap(map);
+    };
+  }, [map]);
 
   return null;
 }
@@ -26,7 +60,7 @@ function LocationTracker() {
   const [position, setPosition] = useState<LatLngExpression | null>(null);
 
   useEffect(() => {
-    if (!navigator.geolocation) return;
+    if (!navigator.geolocation || !map) return;
 
     const watchId = navigator.geolocation.watchPosition(
       (pos) => {
@@ -36,8 +70,12 @@ function LocationTracker() {
         ];
         setPosition(nextPosition);
 
-        if (Number.isFinite(nextPosition[0]) && Number.isFinite(nextPosition[1])) {
-          map.flyTo(nextPosition, 17, { duration: 1.2 });
+        if (
+          Number.isFinite(nextPosition[0]) &&
+          Number.isFinite(nextPosition[1])
+        ) {
+          // Se mantiene el marcador de ubicación sin forzar un nuevo pan del mapa.
+          // Esto evita disparar la transición que produce el error de Leaflet.
         }
       },
       (error) => {
@@ -61,7 +99,10 @@ function LocationTracker() {
       }
     );
 
-    return () => navigator.geolocation.clearWatch(watchId);
+    return () => {
+      navigator.geolocation.clearWatch(watchId);
+      safeStopMap(map);
+    };
   }, [map]);
 
   return position ? (
@@ -98,6 +139,11 @@ export default function MapLeaflet({
       zoom={16}
       maxBounds={bounds}
       maxBoundsViscosity={1.0}
+      zoomAnimation={false}
+      fadeAnimation={false}
+      markerZoomAnimation={false}
+      zoomSnap={0}
+      zoomDelta={1}
       style={{ height: "100%", width: "100%" }}
     >
       <TileLayer url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" />

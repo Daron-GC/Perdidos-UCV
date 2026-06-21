@@ -24,6 +24,22 @@ type LocationData = {
   longitude?: number | null;
 };
 
+type RatingSnapshot = {
+  total: number;
+  count: number;
+};
+
+const dedupeComments = (comments: Comment[]) => {
+  const seen = new Set<number>();
+  return comments.filter((comment) => {
+    if (seen.has(comment.id)) {
+      return false;
+    }
+    seen.add(comment.id);
+    return true;
+  });
+};
+
 function Star({
   filled,
   size = 22,
@@ -119,34 +135,53 @@ export default function CommentsScreen() {
   const [newCommentText, setNewCommentText] = useState("");
   const [loading, setLoading] = useState(false);
   const [errorMessage, setErrorMessage] = useState("");
-  const [isVisible, setIsVisible] = useState(false);
+  const [isVisible] = useState(true);
   const [showRatingPicker, setShowRatingPicker] = useState(false);
   const [selectedRating, setSelectedRating] = useState(0);
-  const [ratingCount, setRatingCount] = useState(0);
+  const [ratingsByLocation, setRatingsByLocation] = useState<
+    Record<number, RatingSnapshot>
+  >({});
 
   const totalLikes = commentsList.reduce((sum, comment) => sum + comment.likes, 0);
-  const averageRating = ratingCount > 0 ? (selectedRating / ratingCount) : 0;
+  const currentLocationRating = locationId
+    ? ratingsByLocation[locationId]
+    : null;
+  const ratingCount = currentLocationRating?.count ?? 0;
+  const averageRating =
+    currentLocationRating && ratingCount > 0
+      ? currentLocationRating.total / ratingCount
+      : 0;
   const featuredComment = [...commentsList]
     .filter((comment) => comment.likes > 0)
     .sort((a, b) => b.likes - a.likes || b.id - a.id)[0];
   const shouldShowFeatured = totalLikes >= 5 && Boolean(featuredComment);
 
   useEffect(() => {
-    setIsVisible(true);
-
     const fetchLocationData = async () => {
-      const query = supabase
-        .from("ubicaciones")
-        .select("id, nombre_ubicacion, descripcion, horarios, latitud, longitud");
+      if (!selectedLocationId) {
+        setLocationId(null);
+        setLocationData({
+          name: selectedLocationName || "Ubicación no seleccionada",
+          description: "Selecciona un lugar en el mapa para ver sus comentarios.",
+          image: "📍",
+        });
+        setCommentsList([]);
+        return;
+      }
 
-      const { data, error } = selectedLocationId
-        ? await query.eq("id", selectedLocationId).maybeSingle()
-        : await query.limit(1).maybeSingle();
+      const { data, error } = await supabase
+        .from("ubicaciones")
+        .select("id, nombre_ubicacion, descripcion, horarios, latitud, longitud")
+        .eq("id", selectedLocationId)
+        .maybeSingle();
 
       if (!error && data) {
-        setLocationId(data.id ?? null);
+        setLocationId(data.id ?? selectedLocationId);
         setLocationData({
-          name: data.nombre_ubicacion || selectedLocationName || "Biblioteca",
+          name:
+            data.nombre_ubicacion ||
+            selectedLocationName ||
+            "Biblioteca",
           description: data.descripcion || "Sin descripción disponible.",
           image: "📚",
           latitude: data.latitud ?? null,
@@ -157,41 +192,52 @@ export default function CommentsScreen() {
 
     const fetchComments = async () => {
       setLoading(true);
-      let query = supabase
-        .from("comentarios")
-        .select("id, contenido, user_id, like, destacado, latitud_ref, longitud_ref")
-        .order("id", { ascending: false });
 
-      if (
-        Number.isFinite(locationData.latitude) &&
-        Number.isFinite(locationData.longitude)
-      ) {
-        query = query
-          .eq("latitud_ref", locationData.latitude)
-          .eq("longitud_ref", locationData.longitude);
+      const currentLocationId = selectedLocationId ?? locationId;
+
+      if (!currentLocationId) {
+        setCommentsList([]);
+        setLoading(false);
+        return;
       }
 
-      const { data, error } = await query;
+      const { data, error } = await supabase
+        .from("comentarios")
+        .select(
+          "id, contenido, user_id, like, destacado, ubicacion_id"
+        )
+        .eq("ubicacion_id", currentLocationId)
+        .order("id", { ascending: false });
 
       if (!error && data) {
-        setCommentsList(
+        const comments = dedupeComments(
           data.map((item) => ({
             id: item.id,
-            user: item.user_id ? `Usuario ${item.user_id}` : "Usuario",
-            username: item.user_id ? `Usuario ${item.user_id}` : "Usuario",
+            user:
+              item.user_id != null
+                ? `Usuario ${item.user_id}`
+                : "Usuario",
+            username:
+              item.user_id != null
+                ? `Usuario ${item.user_id}`
+                : "Usuario",
             avatar: "👤",
             time: `#${item.id}`,
             text: item.contenido || "",
             likes: item.like ? 1 : 0,
           }))
         );
+
+        setCommentsList(comments);
+      } else {
+        setCommentsList([]);
       }
       setLoading(false);
     };
 
     fetchLocationData();
     fetchComments();
-  }, [selectedLocationId, locationData.latitude, locationData.longitude, selectedLocationName]);
+  }, [selectedLocationId, selectedLocationName, locationId]);
 
   const handleSendComment = async () => {
     const text = newCommentText.trim();
@@ -200,59 +246,59 @@ export default function CommentsScreen() {
     try {
       setErrorMessage("");
 
-      let currentLocationId = locationId;
+      const currentLocationId = selectedLocationId ?? locationId;
+
       if (!currentLocationId) {
-        if (
-          !Number.isFinite(locationData.latitude) ||
-          !Number.isFinite(locationData.longitude)
-        ) {
-          setErrorMessage("Esta ubicación aún no tiene coordenadas válidas.");
-          return;
-        }
-
-        const { data: createdLocation, error: locationError } = await supabase
-          .from("ubicaciones")
-          .insert([
-            {
-              nombre_ubicacion: locationData.name || "Ubicación sin nombre",
-              descripcion: locationData.description || "Ubicación creada automáticamente.",
-              latitud: locationData.latitude,
-              longitud: locationData.longitude,
-            },
-          ])
-          .select("id")
-          .single();
-
-        if (locationError || !createdLocation?.id) {
-          console.error("Error creando ubicación:", locationError);
-          setErrorMessage("No se pudo publicar el comentario.");
-          return;
-        }
-
-        currentLocationId = createdLocation.id;
-        setLocationId(createdLocation.id);
+        setErrorMessage("Selecciona una ubicación antes de comentar.");
+        return;
       }
 
-      const { error } = await supabase.from("comentarios").insert([
-        {
-          contenido: text,
-          user_id: null,
-          like: false,
-          destacado: false,
-          latitud_ref: locationData.latitude,
-          longitud_ref: locationData.longitude,
-        },
-      ]);
+      const { data: locationRow, error: locationError } = await supabase
+        .from("ubicaciones")
+        .select("id")
+        .eq("id", currentLocationId)
+        .maybeSingle();
 
-      if (error) {
-        console.error(
-          "Error al publicar comentario:",
-          JSON.stringify(error, null, 2)
+      if (locationError) {
+        console.error("Error validando ubicación:", locationError);
+        setErrorMessage("No se pudo validar la ubicación actual.");
+        return;
+      }
+
+      if (!locationRow?.id) {
+        setErrorMessage(
+          "La ubicación seleccionada ya no existe. Selecciona otra ubicación antes de comentar."
+        );
+        return;
+      }
+
+      setLocationId(locationRow.id);
+
+      const { data: insertedRows, error } = await supabase
+        .from("comentarios")
+        .insert([
+          {
+            contenido: text,
+            user_id: null,
+            like: false,
+            destacado: false,
+            ubicacion_id: locationRow.id,
+          },
+        ])
+        .select(
+          "id, contenido, user_id, like, destacado, ubicacion_id"
         );
 
-        if (error.code === "42501") {
+      if (error) {
+        console.error("Error al publicar comentario:", error);
+
+        if (error.code === "23503") {
           setErrorMessage(
-            "No se puede publicar el comentario porque la tabla bloquea inserciones desde esta sesión. Debe habilitarse la política de acceso para comentarios."
+            "La ubicación seleccionada no es válida para guardar el comentario."
+          );
+        } else if (error.code === "42501") {
+          setErrorMessage(
+            "No se puede publicar el comentario porque la tabla bloquea inserciones desde esta sesión."
           );
         } else {
           setErrorMessage(
@@ -264,25 +310,25 @@ export default function CommentsScreen() {
 
       setNewCommentText("");
 
-      const { data, error: fetchError } = await supabase
-        .from("comentarios")
-        .select("id, contenido, user_id, like, destacado, latitud_ref, longitud_ref")
-        .order("id", { ascending: false })
-        .limit(1);
+      const insertedCommentData = insertedRows?.[0];
+      if (insertedCommentData) {
+        const insertedComment = {
+          id: insertedCommentData.id,
+          user:
+            insertedCommentData.user_id != null
+              ? `Usuario ${insertedCommentData.user_id}`
+              : "Usuario",
+          username:
+            insertedCommentData.user_id != null
+              ? `Usuario ${insertedCommentData.user_id}`
+              : "Usuario",
+          avatar: "👤",
+          time: `#${insertedCommentData.id}`,
+          text: insertedCommentData.contenido || "",
+          likes: insertedCommentData.like ? 1 : 0,
+        };
 
-      if (!fetchError && data?.[0]) {
-        setCommentsList((prev) => [
-          {
-            id: data[0].id,
-            user: data[0].user_id ? `Usuario ${data[0].user_id}` : "Usuario",
-            username: data[0].user_id ? `Usuario ${data[0].user_id}` : "Usuario",
-            avatar: "👤",
-            time: `#${data[0].id}`,
-            text: data[0].contenido || "",
-            likes: data[0].like ? 1 : 0,
-          },
-          ...prev,
-        ]);
+        setCommentsList((prev) => dedupeComments([insertedComment, ...prev]));
       }
     } catch (error) {
       console.error("Error inesperado al publicar:", error);
@@ -292,20 +338,13 @@ export default function CommentsScreen() {
 
   const handleLike = async (id: number, currentLikes: number) => {
     try {
-      const { error } = await supabase
-        .from("comentarios")
-        .update({ like: true })
-        .eq("id", id);
-
-      if (!error) {
-        setCommentsList((prev) =>
-          prev.map((comment) =>
-            comment.id === id
-              ? { ...comment, likes: currentLikes + 1 }
-              : comment
-          )
-        );
-      }
+      setCommentsList((prev) =>
+        prev.map((comment) =>
+          comment.id === id
+            ? { ...comment, likes: currentLikes + 1 }
+            : comment
+        )
+      );
     } catch (error) {
       console.error(error);
     }
@@ -416,8 +455,18 @@ export default function CommentsScreen() {
                       key={star}
                       type="button"
                       onClick={() => {
+                        const nextLocationId = locationId ?? selectedLocationId;
+
                         setSelectedRating(star);
-                        setRatingCount(1);
+                        if (nextLocationId) {
+                          setRatingsByLocation((prev) => ({
+                            ...prev,
+                            [nextLocationId]: {
+                              total: star,
+                              count: 1,
+                            },
+                          }));
+                        }
                         setShowRatingPicker(false);
                       }}
                       className="transition-transform hover:scale-110"
