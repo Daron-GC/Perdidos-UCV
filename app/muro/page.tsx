@@ -14,12 +14,14 @@ type Comment = {
   time: string;
   text: string;
   likes: number;
+  likedByMe: boolean;
 };
 
 type LocationData = {
   name: string;
   description: string;
   image: string;
+  horarios?: string | null;
   latitude?: number | null;
   longitude?: number | null;
 };
@@ -27,6 +29,16 @@ type LocationData = {
 type RatingSnapshot = {
   total: number;
   count: number;
+};
+
+const RATING_PREFIX = "__RATING__:";
+
+const isRatingEntry = (text: string) => text.startsWith(RATING_PREFIX);
+
+const parseRatingValue = (text: string) => {
+  const raw = text.replace(RATING_PREFIX, "").trim();
+  const parsed = Number(raw);
+  return Number.isFinite(parsed) && parsed >= 1 && parsed <= 5 ? parsed : null;
 };
 
 const dedupeComments = (comments: Comment[]) => {
@@ -38,6 +50,154 @@ const dedupeComments = (comments: Comment[]) => {
     seen.add(comment.id);
     return true;
   });
+};
+
+const loadRatingsFromSupabase = async (
+  supabaseClient: ReturnType<typeof createClient>,
+  locationId: number
+) => {
+  const { data, error } = await supabaseClient
+    .from("comentarios")
+    .select("contenido, ubicacion_id")
+    .eq("ubicacion_id", locationId);
+
+  if (error || !data) {
+    return {} as Record<number, RatingSnapshot>;
+  }
+
+  const ratingTotals = (data as Array<{ ubicacion_id: number | null; contenido: string | null }>).reduce(
+    (acc, item) => {
+      if (!item.ubicacion_id || !item.contenido) return acc;
+
+      const ratingValue = parseRatingValue(item.contenido);
+      if (ratingValue == null) return acc;
+
+      const current = acc[item.ubicacion_id] || { total: 0, count: 0 };
+      return {
+        ...acc,
+        [item.ubicacion_id]: {
+          total: current.total + ratingValue,
+          count: current.count + 1,
+        },
+      };
+    },
+    {} as Record<number, RatingSnapshot>
+  );
+
+  return ratingTotals;
+};
+
+const getCurrentUserId = async (supabaseClient: ReturnType<typeof createClient>) => {
+  const {
+    data: { user },
+    error: userError,
+  } = await supabaseClient.auth.getUser();
+
+  if (userError || !user?.email) {
+    return null;
+  }
+
+  const { data: usuarioRows, error: usuarioError } = await supabaseClient
+    .from("usuario")
+    .select("id")
+    .eq("email", user.email)
+    .limit(1);
+
+  if (usuarioError || !usuarioRows || usuarioRows.length === 0) {
+    return null;
+  }
+
+  const usuarioData = usuarioRows[0];
+
+  if (!usuarioData?.id) {
+    return null;
+  }
+
+  return usuarioData.id as number;
+};
+
+const loadLikesByComment = async (
+  supabaseClient: ReturnType<typeof createClient>,
+  commentIds: number[]
+) => {
+  if (commentIds.length === 0) {
+    return { counts: {} as Record<number, number>, likedByMe: new Set<number>() };
+  }
+
+  const [likesDataResult, userId] = await Promise.all([
+    supabaseClient
+      .from('like')
+      .select('id_comentario, user_id')
+      .in('id_comentario', commentIds),
+    getCurrentUserId(supabaseClient),
+  ]);
+
+  const { data: likesData, error: likesError } = likesDataResult;
+
+  if (likesError || !likesData) {
+    return { counts: {} as Record<number, number>, likedByMe: new Set<number>() };
+  }
+
+  const counts = {} as Record<number, number>;
+  const seenLikeKeys = new Set<string>();
+
+  (likesData as Array<{ id_comentario: number | null; user_id: number | null }>).forEach(
+    (row) => {
+      if (typeof row.id_comentario !== 'number' || typeof row.user_id !== 'number') {
+        return;
+      }
+
+      const likeKey = `${row.id_comentario}:${row.user_id}`;
+      if (seenLikeKeys.has(likeKey)) {
+        return;
+      }
+
+      seenLikeKeys.add(likeKey);
+      counts[row.id_comentario] = (counts[row.id_comentario] || 0) + 1;
+    }
+  );
+
+  const likedByMe = new Set<number>();
+
+  if (userId) {
+    (likesData as Array<{ id_comentario: number | null; user_id: number | null }>).forEach(
+      (row) => {
+        if (row.user_id === userId && typeof row.id_comentario === 'number') {
+          likedByMe.add(row.id_comentario);
+        }
+      }
+    );
+  }
+
+  return { counts, likedByMe };
+};
+
+const loadUserEmailsByIds = async (
+  supabaseClient: ReturnType<typeof createClient>,
+  userIds: number[]
+) => {
+  if (userIds.length === 0) {
+    return {} as Record<number, string>;
+  }
+
+  const { data, error } = await supabaseClient
+    .from('usuario')
+    .select('id, email')
+    .in('id', userIds);
+
+  if (error || !data) {
+    return {} as Record<number, string>;
+  }
+
+  return (data as Array<{ id: number; email: string | null }>).reduce(
+    (acc, row) => {
+      if (row.id != null && row.email) {
+        acc[row.id] = row.email;
+      }
+      return acc;
+    },
+    {} as Record<number, string>
+  );
 };
 
 function Star({
@@ -129,6 +289,7 @@ export default function CommentsScreen() {
     name: selectedLocationName || "Cargando...",
     description: "Cargando descripción...",
     image: "📍",
+    horarios: null,
   });
   const [locationId, setLocationId] = useState<number | null>(selectedLocationId);
   const [commentsList, setCommentsList] = useState<Comment[]>([]);
@@ -141,6 +302,7 @@ export default function CommentsScreen() {
   const [ratingsByLocation, setRatingsByLocation] = useState<
     Record<number, RatingSnapshot>
   >({});
+  const [isImageModalOpen, setIsImageModalOpen] = useState(false);
 
   const totalLikes = commentsList.reduce((sum, comment) => sum + comment.likes, 0);
   const currentLocationRating = locationId
@@ -155,6 +317,9 @@ export default function CommentsScreen() {
     .filter((comment) => comment.likes > 0)
     .sort((a, b) => b.likes - a.likes || b.id - a.id)[0];
   const shouldShowFeatured = totalLikes >= 5 && Boolean(featuredComment);
+  const hasImageUrl = Boolean(
+    locationData.image && /^https?:\/\//i.test(locationData.image)
+  );
 
   useEffect(() => {
     const fetchLocationData = async () => {
@@ -164,6 +329,7 @@ export default function CommentsScreen() {
           name: selectedLocationName || "Ubicación no seleccionada",
           description: "Selecciona un lugar en el mapa para ver sus comentarios.",
           image: "📍",
+          horarios: null,
         });
         setCommentsList([]);
         return;
@@ -171,7 +337,7 @@ export default function CommentsScreen() {
 
       const { data, error } = await supabase
         .from("ubicaciones")
-        .select("id, nombre_ubicacion, descripcion, horarios, latitud, longitud")
+        .select("id, nombre_ubicacion, descripcion, horarios, latitud, longitud, IMG")
         .eq("id", selectedLocationId)
         .maybeSingle();
 
@@ -183,7 +349,8 @@ export default function CommentsScreen() {
             selectedLocationName ||
             "Biblioteca",
           description: data.descripcion || "Sin descripción disponible.",
-          image: "📚",
+          image: data.IMG || "📚",
+          horarios: data.horarios ?? null,
           latitude: data.latitud ?? null,
           longitude: data.longitud ?? null,
         });
@@ -204,33 +371,53 @@ export default function CommentsScreen() {
       const { data, error } = await supabase
         .from("comentarios")
         .select(
-          "id, contenido, user_id, like, destacado, ubicacion_id"
+          "id, contenido, user_id, destacado, ubicacion_id"
         )
         .eq("ubicacion_id", currentLocationId)
         .order("id", { ascending: false });
 
       if (!error && data) {
+        const commentRows = (data as Array<{ contenido: string | null; id: number; user_id: number | null }>).filter(
+          (item) => !isRatingEntry(item.contenido || "")
+        );
+        const commentIds = commentRows.map((item) => item.id);
+        const { counts, likedByMe } = await loadLikesByComment(supabase, commentIds);
+
+        const userIds = Array.from(
+          new Set(
+            commentRows
+              .map((item) => item.user_id)
+              .filter((id): id is number => typeof id === 'number')
+          )
+        );
+        const userEmails = await loadUserEmailsByIds(supabase, userIds);
+
         const comments = dedupeComments(
-          data.map((item) => ({
-            id: item.id,
-            user:
-              item.user_id != null
-                ? `Usuario ${item.user_id}`
-                : "Usuario",
-            username:
-              item.user_id != null
-                ? `Usuario ${item.user_id}`
-                : "Usuario",
-            avatar: "👤",
-            time: `#${item.id}`,
-            text: item.contenido || "",
-            likes: item.like ? 1 : 0,
-          }))
+          commentRows.map((item) => {
+            const authorEmail =
+              item.user_id != null && userEmails[item.user_id]
+                ? userEmails[item.user_id]
+                : null;
+
+            return {
+              id: item.id,
+              user: authorEmail || (item.user_id != null ? `Usuario ${item.user_id}` : "Usuario"),
+              username: authorEmail || (item.user_id != null ? `Usuario ${item.user_id}` : "Usuario"),
+              avatar: "👤",
+              time: `#${item.id}`,
+              text: item.contenido || "",
+              likes: counts[item.id] || 0,
+              likedByMe: likedByMe.has(item.id),
+            };
+          })
         );
 
+        const ratingTotals = await loadRatingsFromSupabase(supabase, currentLocationId);
+        setRatingsByLocation(ratingTotals);
         setCommentsList(comments);
       } else {
         setCommentsList([]);
+        setRatingsByLocation({});
       }
       setLoading(false);
     };
@@ -274,12 +461,24 @@ export default function CommentsScreen() {
 
       setLocationId(locationRow.id);
 
+      const currentUserId = await getCurrentUserId(supabase);
+      const currentUserEmail =
+        currentUserId != null
+          ? (
+              await supabase
+                .from("usuario")
+                .select("email")
+                .eq("id", currentUserId)
+                .maybeSingle()
+            ).data?.email ?? null
+          : null;
+
       const { data: insertedRows, error } = await supabase
         .from("comentarios")
         .insert([
           {
             contenido: text,
-            user_id: null,
+            user_id: currentUserId,
             like: false,
             destacado: false,
             ubicacion_id: locationRow.id,
@@ -315,17 +514,20 @@ export default function CommentsScreen() {
         const insertedComment = {
           id: insertedCommentData.id,
           user:
-            insertedCommentData.user_id != null
+            currentUserEmail ||
+            (insertedCommentData.user_id != null
               ? `Usuario ${insertedCommentData.user_id}`
-              : "Usuario",
+              : "Usuario"),
           username:
-            insertedCommentData.user_id != null
+            currentUserEmail ||
+            (insertedCommentData.user_id != null
               ? `Usuario ${insertedCommentData.user_id}`
-              : "Usuario",
+              : "Usuario"),
           avatar: "👤",
           time: `#${insertedCommentData.id}`,
           text: insertedCommentData.contenido || "",
-          likes: insertedCommentData.like ? 1 : 0,
+          likes: 0,
+          likedByMe: false,
         };
 
         setCommentsList((prev) => dedupeComments([insertedComment, ...prev]));
@@ -336,17 +538,157 @@ export default function CommentsScreen() {
     }
   };
 
-  const handleLike = async (id: number, currentLikes: number) => {
+  const handleLike = async (id: number, likedByMe: boolean) => {
     try {
-      setCommentsList((prev) =>
-        prev.map((comment) =>
-          comment.id === id
-            ? { ...comment, likes: currentLikes + 1 }
-            : comment
-        )
-      );
+      const userId = await getCurrentUserId(supabase);
+
+      if (!userId) {
+        setErrorMessage("Debes iniciar sesión para dar like.");
+        return;
+      }
+
+      const { data: existingLikes, error: existingLikeError } = await supabase
+        .from('like')
+        .select('id')
+        .eq('user_id', userId)
+        .eq('id_comentario', id);
+
+      if (existingLikeError) {
+        console.error(existingLikeError);
+        setErrorMessage("No se pudo actualizar el like.");
+        return;
+      }
+
+      const existingLikeRows = (existingLikes as Array<{ id: number }> | null) ?? [];
+
+      if (likedByMe && existingLikeRows.length > 0) {
+        const { error: deleteError } = await supabase
+          .from('like')
+          .delete()
+          .in(
+            'id',
+            existingLikeRows.map((row) => row.id)
+          );
+
+        if (deleteError) {
+          console.error(deleteError);
+          setErrorMessage("No se pudo quitar el like.");
+          return;
+        }
+
+        setCommentsList((prev) =>
+          prev.map((comment) =>
+            comment.id === id
+              ? { ...comment, likes: Math.max(0, comment.likes - 1), likedByMe: false }
+              : comment
+          )
+        );
+      } else if (!likedByMe && existingLikeRows.length === 0) {
+        const { error: insertError } = await supabase
+          .from('like')
+          .insert([
+            {
+              user_id: userId,
+              id_comentario: id,
+            },
+          ]);
+
+        if (insertError) {
+          console.error(insertError);
+          setErrorMessage(
+            insertError.code === '42501'
+              ? 'No tienes permiso para guardar este like en la base de datos.'
+              : 'No se pudo registrar el like.'
+          );
+          return;
+        }
+
+        setCommentsList((prev) =>
+          prev.map((comment) =>
+            comment.id === id
+              ? { ...comment, likes: comment.likes + 1, likedByMe: true }
+              : comment
+          )
+        );
+      }
     } catch (error) {
       console.error(error);
+      setErrorMessage("No se pudo actualizar el like.");
+    }
+  };
+
+  const handleRateLocation = async (rating: number) => {
+    try {
+      const nextLocationId = locationId ?? selectedLocationId;
+      if (!nextLocationId) return;
+
+      const {
+        data: { user },
+        error: userError,
+      } = await supabase.auth.getUser();
+
+      if (userError || !user?.email) {
+        setErrorMessage("Debes iniciar sesión para puntuar.");
+        return;
+      }
+
+      const { data: usuarioData } = await supabase
+        .from("usuario")
+        .select("id")
+        .eq("email", user.email)
+        .maybeSingle();
+
+      const userId = usuarioData?.id ?? null;
+
+      if (userId === null) {
+        setErrorMessage("No se encontró tu usuario para guardar la puntuación.");
+        return;
+      }
+
+      const { data: existingRatings, error: fetchError } = await supabase
+        .from("comentarios")
+        .select("id, contenido, ubicacion_id, user_id")
+        .eq("ubicacion_id", nextLocationId)
+        .eq("user_id", userId);
+
+      if (!fetchError && existingRatings) {
+        const existingRatingRows = (existingRatings as Array<Record<string, unknown>> | null) ?? [];
+        const previouslyRated = existingRatingRows.filter((entry) =>
+          isRatingEntry(String(entry?.contenido || ""))
+        );
+
+        if (previouslyRated.length > 0) {
+          const idsToDelete = previouslyRated
+            .map((entry) => entry.id)
+            .filter((id): id is number => typeof id === "number");
+
+          if (idsToDelete.length > 0) {
+            await supabase.from("comentarios").delete().in("id", idsToDelete);
+          }
+        }
+      }
+
+      const { error } = await supabase.from("comentarios").insert([
+        {
+          contenido: `${RATING_PREFIX}${rating}`,
+          user_id: userId,
+          like: false,
+          destacado: false,
+          ubicacion_id: nextLocationId,
+        },
+      ]);
+
+      if (!error) {
+        setSelectedRating(rating);
+        const refreshedRatings = await loadRatingsFromSupabase(supabase, nextLocationId);
+        setRatingsByLocation(refreshedRatings);
+        setShowRatingPicker(false);
+      } else {
+        setErrorMessage("No se pudo guardar la puntuación.");
+      }
+    } catch (error) {
+      console.error(error);
+      setErrorMessage("No se pudo guardar la puntuación.");
     }
   };
 
@@ -362,12 +704,23 @@ export default function CommentsScreen() {
   };
 
   return (
-    <main className="min-h-screen bg-[#F8F9FA] flex items-center justify-center px-4 py-8">
-      <div
-        className={`w-full max-w-sm overflow-hidden rounded-[34px] border border-white bg-white shadow-[0_10px_35px_rgba(0,0,0,0.08)] transition-all duration-500 ease-out ${
-          isVisible ? "translate-y-0 opacity-100" : "translate-y-6 opacity-0"
-        }`}
-      >
+    <main className="relative min-h-screen overflow-hidden bg-[#EEF7F2]">
+      <div className="absolute inset-0 z-0 bg-[#EEF7F2]">
+        <div className="absolute inset-0 bg-[radial-gradient(circle_at_top,_rgba(255,255,255,0.75),_transparent_22%)]" />
+        <svg className="h-full w-full" viewBox="0 0 400 300" fill="none" preserveAspectRatio="none">
+          <path d="M-20 50C60 80 100 20 180 60C260 100 300 20 420 80" stroke="#DDEED8" strokeWidth="28" strokeLinecap="round" />
+          <path d="M-20 180C50 140 120 220 200 170C260 130 320 190 420 140" stroke="#DDEED8" strokeWidth="24" strokeLinecap="round" />
+          <path d="M40 -20C80 60 120 100 80 320" stroke="#E7F5E4" strokeWidth="18" strokeLinecap="round" />
+          <path d="M260 -20C240 60 310 120 290 320" stroke="#E7F5E4" strokeWidth="20" strokeLinecap="round" />
+        </svg>
+      </div>
+
+      <div className="relative z-10 flex min-h-screen items-center justify-center px-4 py-8">
+        <div
+          className={`w-full max-w-sm overflow-hidden rounded-[34px] border border-white bg-white shadow-[0_10px_35px_rgba(0,0,0,0.08)] transition-all duration-500 ease-out ${
+            isVisible ? "translate-y-0 opacity-100" : "translate-y-6 opacity-0"
+          }`}
+        >
         <div className="relative h-[180px] overflow-hidden bg-[#EAF7E8]">
           <div className="absolute inset-0 opacity-70">
             <svg className="h-full w-full" viewBox="0 0 400 300" fill="none">
@@ -403,11 +756,24 @@ export default function CommentsScreen() {
           <div className="mx-auto mb-5 h-1.5 w-16 rounded-full bg-[#D1D5DB]" />
 
           <div className="flex gap-4">
-            <div className="h-28 w-28 shrink-0 overflow-hidden rounded-3xl bg-gradient-to-br from-[#00F5D4] to-[#00BBF9] p-[2px]">
-              <div className="flex h-full w-full items-center justify-center rounded-[22px] bg-[#E5E7EB] text-5xl">
-                {locationData.image}
+            <button
+              type="button"
+              onClick={() => hasImageUrl && setIsImageModalOpen(true)}
+              className={`h-28 w-28 shrink-0 overflow-hidden rounded-3xl bg-gradient-to-br from-[#00F5D4] to-[#00BBF9] p-[2px] ${hasImageUrl ? "cursor-zoom-in" : "cursor-default"}`}
+              disabled={!hasImageUrl}
+            >
+              <div className="flex h-full w-full items-center justify-center overflow-hidden rounded-[22px] bg-[#E5E7EB]">
+                {hasImageUrl ? (
+                  <img
+                    src={locationData.image}
+                    alt={locationData.name}
+                    className="h-full w-full object-cover"
+                  />
+                ) : (
+                  <span className="text-5xl">{locationData.image}</span>
+                )}
               </div>
-            </div>
+            </button>
 
             <div className="flex flex-1 flex-col">
               <h1 className="text-[28px] leading-[1] text-black uppercase" style={{ fontFamily: "Comic Sans MS, cursive" }}>
@@ -421,8 +787,11 @@ export default function CommentsScreen() {
               </p>
 
               <div className="mt-3 space-y-1 text-[13px] text-[#4B5563]">
-                <p>🕒 Lun - Vie: 7:00 AM - 9:00 PM</p>
-                <p>🕒 Sáb: 8:00 AM - 2:00 PM</p>
+                {locationData.horarios ? (
+                  <p className="whitespace-pre-line">🕒 {locationData.horarios}</p>
+                ) : (
+                  <p className="text-[12px] text-[#6B7280]">Horario no disponible</p>
+                )}
                 {selectedLocationId ? (
                   <p className="text-[12px] text-[#6B7280]">
                     ID ubicación: {selectedLocationId}
@@ -454,21 +823,7 @@ export default function CommentsScreen() {
                     <button
                       key={star}
                       type="button"
-                      onClick={() => {
-                        const nextLocationId = locationId ?? selectedLocationId;
-
-                        setSelectedRating(star);
-                        if (nextLocationId) {
-                          setRatingsByLocation((prev) => ({
-                            ...prev,
-                            [nextLocationId]: {
-                              total: star,
-                              count: 1,
-                            },
-                          }));
-                        }
-                        setShowRatingPicker(false);
-                      }}
+                      onClick={() => handleRateLocation(star)}
                       className="transition-transform hover:scale-110"
                     >
                       <Star filled={star <= selectedRating || star <= Math.round(averageRating)} />
@@ -538,9 +893,10 @@ export default function CommentsScreen() {
                   </div>
 
                   <div className="flex flex-col items-center gap-1">
-                    <button onClick={() => handleLike(comment.id, comment.likes)}>
-                      <HeartIcon filled={comment.likes > 0} />
+                    <button onClick={() => handleLike(comment.id, comment.likedByMe)}>
+                      <HeartIcon filled={comment.likedByMe} />
                     </button>
+                    <span className="text-xs font-semibold text-[#6B7280]">{comment.likes}</span>
                     <button onClick={() => handleDelete(comment.id)} className="text-gray-400 hover:text-red-500" aria-label="Eliminar comentario">
                       <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                         <path d="M3 6h18" />
@@ -594,7 +950,28 @@ export default function CommentsScreen() {
             </div>
           </div>
         </section>
+        </div>
       </div>
+
+      {isImageModalOpen && hasImageUrl ? (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4">
+          <div className="relative max-h-[90vh] w-full max-w-2xl overflow-hidden rounded-[28px] bg-white shadow-2xl">
+            <button
+              type="button"
+              onClick={() => setIsImageModalOpen(false)}
+              aria-label="Cerrar imagen"
+              className="absolute right-3 top-3 z-10 flex h-10 w-10 items-center justify-center rounded-full bg-black/60 text-white transition hover:bg-black/80"
+            >
+              ✕
+            </button>
+            <img
+              src={locationData.image}
+              alt={locationData.name}
+              className="max-h-[90vh] w-full object-contain"
+            />
+          </div>
+        </div>
+      ) : null}
     </main>
   );
 }

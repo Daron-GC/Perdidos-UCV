@@ -2,12 +2,13 @@
 
 import Link from "next/link";
 import { useState } from "react";
-import { supabase } from "@/lib/supabase";
 import { useRouter } from "next/navigation";
+import { createClient } from "@/lib/supabase/client";
 import LoadingOverlay from "@/components/LoadingOverlay";
 
 export default function Register() {
   const router = useRouter();
+  const supabase = createClient();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");

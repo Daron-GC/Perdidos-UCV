@@ -3,11 +3,12 @@
 import Link from "next/link";
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { supabase } from "@/lib/supabase";
+import { createClient } from "@/lib/supabase/client";
 import LoadingOverlay from "@/components/LoadingOverlay";
 
 export default function Login() {
   const router = useRouter();
+  const supabase = createClient();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
@@ -27,20 +28,7 @@ export default function Login() {
         password,
       });
 
-      if (!authError) {
-        await router.push("/mapa");
-        setIsLoading(false);
-        return;
-      }
-
-      const { data: usuarioData, error: usuarioError } = await supabase
-        .from("usuario")
-        .select("id, email, password")
-        .eq("email", email)
-        .eq("password", password)
-        .maybeSingle();
-
-      if (usuarioError || !usuarioData) {
+      if (authError) {
         alert("Correo o contraseña incorrectos.");
         setIsLoading(false);
         return;

@@ -21,6 +21,7 @@ import {
 
 export default function ProfilePage() {
   const [username, setUsername] = useState<string | null>(null);
+  const [email, setEmail] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const router = useRouter();
   const supabase = createClient();
@@ -30,22 +31,26 @@ export default function ProfilePage() {
 
   useEffect(() => {
     async function loadProfile() {
-      const { username, rating, comments_count } = await getUserProfile();
-      setUsername(username || "Usuario");
-      setRating(rating ?? null);
-      setCommentsCount(comments_count ?? 0);
-        // mostrar el correo del usuario autenticado bajo el nombre (fallback: Estudiante UCV)
-        try {
-          const { data } = await supabase.auth.getUser();
-          const user = data.user;
-          setSubtitle(user?.email ? String(user.email) : "Estudiante UCV");
-        } catch (e) {
-          // ignore and keep default
-        }
+      try {
+        const profile = await getUserProfile();
+        const displayName = profile.email || profile.username || "Usuario";
+
+        setUsername(displayName);
+        setEmail(profile.email ?? null);
+        setRating(profile.rating ?? null);
+        setCommentsCount(profile.comments_count ?? 0);
+        setSubtitle(displayName || "Estudiante UCV");
+      } catch (e) {
+        setUsername("Usuario");
+        setEmail(null);
+        setSubtitle("Estudiante UCV");
+      } finally {
         setLoading(false);
+      }
     }
+
     loadProfile();
-  }, []);
+  }, [supabase]);
 
   const handleLogout = async () => {
     try {
@@ -78,6 +83,12 @@ export default function ProfilePage() {
           <h2 className="text-3xl comic-font text-gray-800 mt-3 tracking-wide fade-in-up stagger-2">
             {username}
           </h2>
+
+          {email ? (
+            <p className="text-sm text-gray-500 mt-1 fade-in-up stagger-3">
+              {email}
+            </p>
+          ) : null}
 
           <p className="text-sm text-gray-500 mt-1 flex items-center gap-2 fade-in-up stagger-3">
             <span className="font-medium">{subtitle}</span>

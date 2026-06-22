@@ -1,18 +1,41 @@
+import { createServerClient } from '@supabase/ssr'
 import { NextResponse, type NextRequest } from 'next/server'
 
 export async function middleware(request: NextRequest) {
-  // Ejecuta la lógica de refresco de sesión en cada solicitud
-  return await updateSession(request)
-}
+  let supabaseResponse = NextResponse.next({
+    request,
+  })
 
-async function updateSession(request: NextRequest) {
-  // TODO: reemplazar con la lógica real de refresco de sesión
-  return NextResponse.next()
+  const supabase = createServerClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+    {
+      cookies: {
+        getAll() {
+          return request.cookies.getAll()
+        },
+        setAll(cookiesToSet) {
+          cookiesToSet.forEach(({ name, value, options }) => {
+            supabaseResponse.cookies.set(name, value, options)
+          })
+        },
+      },
+    }
+  )
+
+  const {
+    data: { user },
+  } = await supabase.auth.getUser()
+
+  if (user) {
+    await supabase.auth.getSession()
+  }
+
+  return supabaseResponse
 }
 
 export const config = {
   matcher: [
-    // Ejecutar en todas las rutas excepto las estáticas y API
     '/((?!_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)',
   ],
 }

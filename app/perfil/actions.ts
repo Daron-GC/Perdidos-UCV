@@ -8,29 +8,81 @@ export async function getUserProfile() {
   const { data: { user }, error: userError } = await supabase.auth.getUser()
 
   if (userError || !user) {
-    console.error('Error obteniendo usuario:', userError)
-    return { username: null, error: 'No autenticado' }
+    return {
+      email: null,
+      username: null,
+      rating: null,
+      comments_count: 0,
+      error: 'No autenticado',
+    }
   }
 
-  console.log('Usuario autenticado:', user.email) // ← verifica en consola del servidor
+  const authEmail = user.email?.trim() ?? null
 
-  // 🔁 CAMBIA 'user' por el nombre REAL de tu tabla (ej. 'profiles')
-  // 🔁 CAMBIA 'username' por el nombre REAL de la columna (ej. 'full_name')
-  const { data: profile, error: profileError } = await supabase
-    .from('profiles')        // ← ¿Es 'user' o 'profiles'?
-    .select('username, rating, comments_count')  // intentar traer rating y contador de comentarios
-    .eq('email', user.email)
-    .single()
-
-  if (profileError) {
-    console.error('Error buscando perfil:', profileError)
-    // No existe perfil: usar email como nombre de usuario
-    const fallback = user.email?.split('@')[0] || 'Usuario'
-    return { username: fallback, rating: null, comments_count: 0, error: null }
+  if (!authEmail) {
+    return {
+      email: null,
+      username: null,
+      rating: null,
+      comments_count: 0,
+      error: 'No hay email en la sesión',
+    }
   }
 
-  console.log('Perfil encontrado:', profile) // ← verifica
-  return { username: profile.username, rating: profile.rating ?? null, comments_count: profile.comments_count ?? 0, error: null }
+  const { data: usuarioData, error: usuarioError } = await supabase
+    .from('usuario')
+    .select('id, email')
+    .eq('email', authEmail)
+    .maybeSingle()
+
+  const emailFromTable = usuarioData?.email ?? null
+
+  if (usuarioError) {
+    return {
+      email: emailFromTable ?? authEmail,
+      username: emailFromTable ?? authEmail,
+      rating: null,
+      comments_count: 0,
+      error: 'Error al consultar la tabla usuario',
+    }
+  }
+
+  if (!usuarioData) {
+    return {
+      email: authEmail,
+      username: authEmail,
+      rating: null,
+      comments_count: 0,
+      error: 'No existe el usuario en public.usuario',
+    }
+  }
+
+  const userId = usuarioData.id
+
+  let commentsCount = 0
+  let likesCount = 0
+
+  const { data: commentsData, error: commentsError } = await supabase
+    .from('comentarios')
+    .select('id, like')
+    .eq('user_id', userId)
+
+  if (!commentsError && commentsData) {
+    commentsCount = commentsData.length
+    likesCount = commentsData.filter((comment) => comment.like === true).length
+  }
+
+  const rating = commentsCount > 0
+    ? Number(((likesCount / commentsCount) * 5).toFixed(1))
+    : null
+
+  return {
+    email: usuarioData.email,
+    username: usuarioData.email,
+    rating,
+    comments_count: commentsCount,
+    error: null,
+  }
 }
 export async function logoutAction() {
   const supabase = await createServerSupabaseClient()
