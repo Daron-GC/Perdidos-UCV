@@ -715,9 +715,9 @@ export default function CommentsScreen() {
         </svg>
       </div>
 
-      <div className="relative z-10 flex min-h-screen items-center justify-center px-4 py-8">
+      <div className="relative z-10 flex min-h-screen items-center justify-center px-4 py-8 sm:px-6 md:px-8">
         <div
-          className={`w-full max-w-sm overflow-hidden rounded-[34px] border border-white bg-white shadow-[0_10px_35px_rgba(0,0,0,0.08)] transition-all duration-500 ease-out ${
+          className={`w-full max-w-[calc(100%-2rem)] sm:max-w-3xl xl:max-w-5xl overflow-hidden rounded-[34px] border border-white bg-white shadow-[0_10px_35px_rgba(0,0,0,0.08)] transition-all duration-500 ease-out ${
             isVisible ? "translate-y-0 opacity-100" : "translate-y-6 opacity-0"
           }`}
         >
@@ -755,7 +755,7 @@ export default function CommentsScreen() {
         <section className="relative -mt-10 rounded-t-[34px] bg-white px-5 pb-5 pt-4">
           <div className="mx-auto mb-5 h-1.5 w-16 rounded-full bg-[#D1D5DB]" />
 
-          <div className="flex gap-4">
+          <div className="flex flex-col gap-4 sm:flex-row">
             <button
               type="button"
               onClick={() => hasImageUrl && setIsImageModalOpen(true)}
@@ -888,7 +888,7 @@ export default function CommentsScreen() {
                         <span className="text-xs text-[#9CA3AF]">• {comment.time}</span>
                       </div>
 
-                      <p className="mt-1 max-w-[210px] text-[15px] leading-6 text-[#1F2937]">{comment.text}</p>
+                      <p className="mt-1 max-w-full text-[15px] leading-6 text-[#1F2937]">{comment.text}</p>
                     </div>
                   </div>
 
@@ -912,9 +912,9 @@ export default function CommentsScreen() {
             )}
           </div>
 
-          <div className="mt-8 flex flex-col gap-2 pb-6 pt-2">
+          <div className="mt-8 flex flex-col gap-3 pb-6 pt-2 sm:gap-4">
             {errorMessage ? <p className="text-xs text-red-500">{errorMessage}</p> : null}
-            <div className="flex items-center gap-3">
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:gap-4">
               <div className="flex flex-1 items-center rounded-2xl border-2 border-[#E5E7EB] bg-white px-4 py-3">
                 <input
                   type="text"
@@ -942,7 +942,7 @@ export default function CommentsScreen() {
               <button
                 type="button"
                 onClick={() => setShowRatingPicker((prev) => !prev)}
-                className="flex h-[74px] w-[74px] flex-col items-center justify-center rounded-3xl border-2 border-[#FFE58F] bg-[#FFFBEA] transition-transform hover:scale-105"
+                className="flex h-[74px] w-full items-center justify-center rounded-3xl border-2 border-[#FFE58F] bg-[#FFFBEA] transition-transform hover:scale-105 sm:w-[74px]"
               >
                 <Star filled={selectedRating > 0} />
                 <span className="mt-1 text-xs font-semibold text-[#111827]">Puntuar</span>
