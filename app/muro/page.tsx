@@ -15,6 +15,16 @@ type Comment = {
   text: string;
   likes: number;
   likedByMe: boolean;
+  destacado?: boolean | null;
+  userId?: number | null;
+};
+
+type SupabaseCommentRow = {
+  id: number;
+  contenido: string | null;
+  user_id: number | null;
+  destacado?: boolean | null;
+  ubicacion_id?: number | null;
 };
 
 type LocationData = {
@@ -50,6 +60,12 @@ const dedupeComments = (comments: Comment[]) => {
     seen.add(comment.id);
     return true;
   });
+};
+
+const extractUsernameFromEmail = (email?: string | null) => {
+  if (!email) return null;
+  const localPart = email.split("@")[0] ?? "";
+  return localPart || email;
 };
 
 const loadRatingsFromSupabase = async (
@@ -200,6 +216,39 @@ const loadUserEmailsByIds = async (
   );
 };
 
+const FAVORITES_STORAGE_KEY = "perdidos_ucv_favoritos";
+
+type FavoriteItem = {
+  ubicacionId: number;
+  nombre: string;
+  descripcion?: string | null;
+  latitud?: number | null;
+  longitud?: number | null;
+};
+
+const loadFavoritesFromStorage = () => {
+  if (typeof window === "undefined") return [] as FavoriteItem[];
+  try {
+    const stored = window.localStorage.getItem(FAVORITES_STORAGE_KEY);
+    if (!stored) return [] as FavoriteItem[];
+    const parsed = JSON.parse(stored);
+    if (!Array.isArray(parsed)) return [] as FavoriteItem[];
+    return parsed.filter(
+      (item): item is FavoriteItem =>
+        item &&
+        typeof item.ubicacionId === "number" &&
+        typeof item.nombre === "string"
+    );
+  } catch {
+    return [] as FavoriteItem[];
+  }
+};
+
+const saveFavoritesToStorage = (favorites: FavoriteItem[]) => {
+  if (typeof window === "undefined") return;
+  window.localStorage.setItem(FAVORITES_STORAGE_KEY, JSON.stringify(favorites));
+};
+
 function Star({
   filled,
   size = 22,
@@ -302,7 +351,11 @@ export default function CommentsScreen() {
   const [ratingsByLocation, setRatingsByLocation] = useState<
     Record<number, RatingSnapshot>
   >({});
+  const [favoriteItems, setFavoriteItems] = useState<FavoriteItem[]>([]);
+  const [currentUserId, setCurrentUserId] = useState<number | null>(null);
   const [isImageModalOpen, setIsImageModalOpen] = useState(false);
+  const activeLocationId = selectedLocationId ?? locationId;
+  const isFavorite = activeLocationId != null && favoriteItems.some((item) => item.ubicacionId === activeLocationId);
 
   const totalLikes = commentsList.reduce((sum, comment) => sum + comment.likes, 0);
   const currentLocationRating = locationId
@@ -317,6 +370,10 @@ export default function CommentsScreen() {
     .filter((comment) => comment.likes > 0)
     .sort((a, b) => b.likes - a.likes || b.id - a.id)[0];
   const shouldShowFeatured = totalLikes >= 5 && Boolean(featuredComment);
+  const pinnedComment = commentsList.find((comment) => comment.destacado) ?? null;
+  const visibleComments = pinnedComment
+    ? commentsList.filter((comment) => comment.id !== pinnedComment.id)
+    : commentsList;
   const hasImageUrl = Boolean(
     locationData.image && /^https?:\/\//i.test(locationData.image)
   );
@@ -377,7 +434,7 @@ export default function CommentsScreen() {
         .order("id", { ascending: false });
 
       if (!error && data) {
-        const commentRows = (data as Array<{ contenido: string | null; id: number; user_id: number | null }>).filter(
+        const commentRows = (data as SupabaseCommentRow[]).filter(
           (item) => !isRatingEntry(item.contenido || "")
         );
         const commentIds = commentRows.map((item) => item.id);
@@ -399,18 +456,27 @@ export default function CommentsScreen() {
                 ? userEmails[item.user_id]
                 : null;
 
+            const displayName = extractUsernameFromEmail(authorEmail) ||
+              (item.user_id != null ? `Usuario ${item.user_id}` : "Usuario");
+
             return {
               id: item.id,
               user: authorEmail || (item.user_id != null ? `Usuario ${item.user_id}` : "Usuario"),
-              username: authorEmail || (item.user_id != null ? `Usuario ${item.user_id}` : "Usuario"),
+              username: displayName,
               avatar: "👤",
               time: `#${item.id}`,
               text: item.contenido || "",
               likes: counts[item.id] || 0,
               likedByMe: likedByMe.has(item.id),
+              destacado: item.destacado ?? false,
+              userId: item.user_id,
             };
           })
-        );
+        ).sort((a, b) => {
+          if (a.destacado && !b.destacado) return -1;
+          if (!a.destacado && b.destacado) return 1;
+          return b.id - a.id;
+        });
 
         const ratingTotals = await loadRatingsFromSupabase(supabase, currentLocationId);
         setRatingsByLocation(ratingTotals);
@@ -425,6 +491,52 @@ export default function CommentsScreen() {
     fetchLocationData();
     fetchComments();
   }, [selectedLocationId, selectedLocationName, locationId]);
+
+  useEffect(() => {
+    getCurrentUserId(supabase)
+      .then(setCurrentUserId)
+      .catch(() => setCurrentUserId(null));
+  }, []);
+
+  useEffect(() => {
+    const storedFavorites = loadFavoritesFromStorage();
+    setFavoriteItems(storedFavorites);
+  }, []);
+
+  const handleToggleFavorite = () => {
+    const nextLocationId = selectedLocationId ?? locationId;
+    if (!nextLocationId) {
+      setErrorMessage("Selecciona una ubicación antes de agregar favoritos.");
+      return;
+    }
+
+    setErrorMessage("");
+
+    setFavoriteItems((currentFavorites) => {
+      const existingIndex = currentFavorites.findIndex(
+        (item) => item.ubicacionId === nextLocationId
+      );
+      let nextFavorites: FavoriteItem[];
+
+      if (existingIndex >= 0) {
+        nextFavorites = currentFavorites.filter(
+          (item) => item.ubicacionId !== nextLocationId
+        );
+      } else {
+        const nextFavorite: FavoriteItem = {
+          ubicacionId: nextLocationId,
+          nombre: locationData.name || selectedLocationName || `Ubicación #${nextLocationId}`,
+          descripcion: locationData.description || null,
+          latitud: locationData.latitude ?? null,
+          longitud: locationData.longitude ?? null,
+        };
+        nextFavorites = [...currentFavorites, nextFavorite];
+      }
+
+      saveFavoritesToStorage(nextFavorites);
+      return nextFavorites;
+    });
+  };
 
   const handleSendComment = async () => {
     const text = newCommentText.trim();
@@ -519,7 +631,7 @@ export default function CommentsScreen() {
               ? `Usuario ${insertedCommentData.user_id}`
               : "Usuario"),
           username:
-            currentUserEmail ||
+            extractUsernameFromEmail(currentUserEmail) ||
             (insertedCommentData.user_id != null
               ? `Usuario ${insertedCommentData.user_id}`
               : "Usuario"),
@@ -528,6 +640,8 @@ export default function CommentsScreen() {
           text: insertedCommentData.contenido || "",
           likes: 0,
           likedByMe: false,
+          destacado: insertedCommentData.destacado ?? false,
+          userId: insertedCommentData.user_id,
         };
 
         setCommentsList((prev) => dedupeComments([insertedComment, ...prev]));
@@ -704,9 +818,9 @@ export default function CommentsScreen() {
   };
 
   return (
-    <main className="relative min-h-screen overflow-hidden bg-[#EEF7F2]">
+    <main className="relative min-h-screen overflow-x-hidden bg-[#EEF7F2]">
       <div className="absolute inset-0 z-0 bg-[#EEF7F2]">
-        <div className="absolute inset-0 bg-[radial-gradient(circle_at_top,_rgba(255,255,255,0.75),_transparent_22%)]" />
+        <div className="absolute inset-0 bg-[radial-gradient(circle_at_top,_rgba(255,255,255,0.85),_transparent_22%)]" />
         <svg className="h-full w-full" viewBox="0 0 400 300" fill="none" preserveAspectRatio="none">
           <path d="M-20 50C60 80 100 20 180 60C260 100 300 20 420 80" stroke="#DDEED8" strokeWidth="28" strokeLinecap="round" />
           <path d="M-20 180C50 140 120 220 200 170C260 130 320 190 420 140" stroke="#DDEED8" strokeWidth="24" strokeLinecap="round" />
@@ -715,9 +829,9 @@ export default function CommentsScreen() {
         </svg>
       </div>
 
-      <div className="relative z-10 flex min-h-screen items-center justify-center px-4 py-8 sm:px-6 md:px-8">
+      <div className="relative z-10 flex min-h-screen w-full flex-col px-0 py-0">
         <div
-          className={`w-full max-w-[calc(100%-2rem)] sm:max-w-3xl xl:max-w-5xl overflow-hidden rounded-[34px] border border-white bg-white shadow-[0_10px_35px_rgba(0,0,0,0.08)] transition-all duration-500 ease-out ${
+          className={`w-full max-w-full overflow-hidden rounded-none bg-white transition-all duration-500 ease-out ${
             isVisible ? "translate-y-0 opacity-100" : "translate-y-6 opacity-0"
           }`}
         >
@@ -746,20 +860,28 @@ export default function CommentsScreen() {
           </div>
 
           <div className="absolute right-4 top-4 z-10">
-            <button className="flex h-12 w-12 items-center justify-center rounded-full bg-white shadow-md">
-              <HeartIcon filled />
+            <button
+              type="button"
+              onClick={handleToggleFavorite}
+              disabled={!locationId}
+              aria-label={isFavorite ? "Quitar de favoritos" : "Agregar a favoritos"}
+              className={`flex h-12 w-12 items-center justify-center rounded-full bg-white shadow-md transition hover:-translate-y-0.5 active:scale-95 ${
+                isFavorite ? "text-[#EF4444]" : "text-[#111827]"
+              } ${!locationId ? "cursor-not-allowed opacity-60" : "hover:shadow-lg"}`}
+            >
+              <HeartIcon filled={isFavorite} />
             </button>
           </div>
         </div>
 
-        <section className="relative -mt-10 rounded-t-[34px] bg-white px-5 pb-5 pt-4">
-          <div className="mx-auto mb-5 h-1.5 w-16 rounded-full bg-[#D1D5DB]" />
+        <section className="relative -mt-10 rounded-t-[32px] bg-white px-4 pb-5 pt-4 sm:px-6">
+          <div className="mb-5 h-1.5 w-16 rounded-full bg-[#D1D5DB]" />
 
           <div className="flex flex-col gap-4 sm:flex-row">
             <button
               type="button"
               onClick={() => hasImageUrl && setIsImageModalOpen(true)}
-              className={`h-28 w-28 shrink-0 overflow-hidden rounded-3xl bg-gradient-to-br from-[#00F5D4] to-[#00BBF9] p-[2px] ${hasImageUrl ? "cursor-zoom-in" : "cursor-default"}`}
+              className={`h-28 w-full max-w-[7rem] shrink-0 overflow-hidden rounded-3xl bg-gradient-to-br from-[#A158FF] via-[#7D53C7] to-[#C084FC] p-[2px] ${hasImageUrl ? "cursor-zoom-in" : "cursor-default"}`}
               disabled={!hasImageUrl}
             >
               <div className="flex h-full w-full items-center justify-center overflow-hidden rounded-[22px] bg-[#E5E7EB]">
@@ -801,7 +923,7 @@ export default function CommentsScreen() {
             </div>
           </div>
 
-          <div className="mt-5 flex items-center gap-2">
+          <div className="mt-5 flex flex-col gap-3 sm:flex-row sm:items-center sm:gap-4">
             <div className="flex items-center gap-1">
               {[1, 2, 3, 4, 5].map((star) => (
                 <Star key={star} filled={star <= Math.round(averageRating)} />
@@ -874,36 +996,135 @@ export default function CommentsScreen() {
           <div className="mt-4 space-y-4 pb-2">
             {loading ? (
               <p className="text-center text-sm text-[#9CA3AF] py-4">Cargando comentarios...</p>
-            ) : commentsList.length > 0 ? (
-              commentsList.map((comment) => (
-                <div key={comment.id} className="flex items-start justify-between gap-3 border-b border-[#F3F4F6] pb-4">
-                  <div className="flex gap-3">
-                    <div className="flex h-12 w-12 items-center justify-center rounded-full bg-[#E9D5FF] text-2xl">
-                      {comment.avatar}
-                    </div>
-
-                    <div>
-                      <div className="flex items-center gap-2">
-                        <span className="text-sm font-bold text-[#7C3AED]">{comment.username}</span>
-                        <span className="text-xs text-[#9CA3AF]">• {comment.time}</span>
+            ) : pinnedComment ? (
+              <>
+                <div className="sticky top-20 z-20 rounded-[28px] border border-[#C4B5FD] bg-gradient-to-r from-[#F8F4FF] via-[#F5F3FF] to-[#EEF2FF] p-5 shadow-[0_20px_50px_rgba(125,83,199,0.12)] backdrop-blur-sm">
+                  <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                    <div className="space-y-2">
+                      <div className="inline-flex items-center gap-2 rounded-full bg-[#7C3AED] px-3 py-1 text-xs font-semibold uppercase tracking-[0.18em] text-white shadow-sm">
+                        <span>Fijado</span>
                       </div>
-
-                      <p className="mt-1 max-w-full text-[15px] leading-6 text-[#1F2937]">{comment.text}</p>
+                    </div>
+                    <div className="rounded-3xl bg-white/90 px-3 py-1 text-sm font-semibold text-[#4B5563] shadow-sm">
+                      {pinnedComment.likes} likes
                     </div>
                   </div>
 
+                  <div className="flex flex-col gap-4 rounded-[24px] bg-white p-4 shadow-sm sm:flex-row sm:items-start">
+                    <div className="flex h-16 w-16 items-center justify-center rounded-[22px] bg-[#EFF6FF] text-3xl shadow-inner">
+                      {pinnedComment.avatar}
+                    </div>
+                    <div className="flex-1">
+                      <div className="mb-3 flex flex-wrap items-center gap-2">
+                        <span className="text-base font-semibold text-[#111827]">{pinnedComment.username}</span>
+                        <span className="rounded-full bg-[#E0E7FF] px-2 py-1 text-[10px] font-semibold uppercase tracking-[0.16em] text-[#4338CA]">
+                          Destacado
+                        </span>
+                        <span className="text-xs text-[#6B7280]">• {pinnedComment.time}</span>
+                      </div>
+                      <p className="text-sm leading-7 text-[#1F2937]">{pinnedComment.text}</p>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      {pinnedComment.userId != null && pinnedComment.userId === currentUserId ? (
+                        <button
+                          onClick={() => handleDelete(pinnedComment.id)}
+                          className="inline-flex items-center justify-center rounded-full bg-[#FEF2F2] px-3 py-2 text-xs font-semibold text-[#B91C1C] transition hover:bg-[#FECACA]"
+                          aria-label="Eliminar comentario fijado"
+                        >
+                          Eliminar
+                        </button>
+                      ) : null}
+                    </div>
+                  </div>
+                </div>
+
+                {visibleComments.length > 0 ? (
+                  visibleComments.map((comment) => (
+                    <div
+                      key={comment.id}
+                      className={`flex items-start justify-between gap-3 rounded-[28px] border p-4 shadow-sm transition-all duration-200 ${
+                        comment.destacado
+                          ? "border-[#C4B5FD] bg-[#F8F4FF]"
+                          : "border-[#F3F4F6] bg-white"
+                      }`}>
+                      <div className="flex gap-3">
+                        <div className="flex h-12 w-12 items-center justify-center rounded-full bg-[#E9D5FF] text-2xl shadow-sm">
+                          {comment.avatar}
+                        </div>
+                        <div>
+                          <div className="flex flex-wrap items-center gap-2">
+                            <span className="text-sm font-bold text-[#7C3AED]">{comment.username}</span>
+                            <span className="text-xs text-[#9CA3AF]">• {comment.time}</span>
+                            {comment.destacado ? (
+                              <span className="rounded-full bg-[#7C3AED] px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.08em] text-white">
+                                Destacado
+                              </span>
+                            ) : null}
+                          </div>
+                          <p className="mt-1 max-w-full text-[15px] leading-6 text-[#1F2937]">{comment.text}</p>
+                        </div>
+                      </div>
+                      <div className="flex flex-col items-center gap-1">
+                        <button onClick={() => handleLike(comment.id, comment.likedByMe)}>
+                          <HeartIcon filled={comment.likedByMe} />
+                        </button>
+                        <span className="text-xs font-semibold text-[#6B7280]">{comment.likes}</span>
+                        {comment.userId != null && comment.userId === currentUserId ? (
+                          <button onClick={() => handleDelete(comment.id)} className="text-gray-400 hover:text-red-500" aria-label="Eliminar comentario">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                              <path d="M3 6h18" />
+                              <path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6" />
+                              <path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2" />
+                            </svg>
+                          </button>
+                        ) : null}
+                      </div>
+                    </div>
+                  ))
+                ) : (
+                  <p className="text-center text-sm text-[#9CA3AF] py-4">No hay más comentarios para mostrar.</p>
+                )}
+              </>
+            ) : commentsList.length > 0 ? (
+              commentsList.map((comment) => (
+                <div
+                  key={comment.id}
+                  className={`flex items-start justify-between gap-3 rounded-[28px] border p-4 shadow-sm transition-all duration-200 ${
+                    comment.destacado
+                      ? "border-[#C4B5FD] bg-[#F8F4FF]"
+                      : "border-[#F3F4F6] bg-white"
+                  }`}>
+                  <div className="flex gap-3">
+                    <div className="flex h-12 w-12 items-center justify-center rounded-full bg-[#E9D5FF] text-2xl shadow-sm">
+                      {comment.avatar}
+                    </div>
+                    <div>
+                      <div className="flex flex-wrap items-center gap-2">
+                        <span className="text-sm font-bold text-[#7C3AED]">{comment.username}</span>
+                        <span className="text-xs text-[#9CA3AF]">• {comment.time}</span>
+                        {comment.destacado ? (
+                          <span className="rounded-full bg-[#7C3AED] px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.08em] text-white">
+                            Destacado
+                          </span>
+                        ) : null}
+                      </div>
+                      <p className="mt-1 max-w-full text-[15px] leading-6 text-[#1F2937]">{comment.text}</p>
+                    </div>
+                  </div>
                   <div className="flex flex-col items-center gap-1">
                     <button onClick={() => handleLike(comment.id, comment.likedByMe)}>
                       <HeartIcon filled={comment.likedByMe} />
                     </button>
                     <span className="text-xs font-semibold text-[#6B7280]">{comment.likes}</span>
-                    <button onClick={() => handleDelete(comment.id)} className="text-gray-400 hover:text-red-500" aria-label="Eliminar comentario">
-                      <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                        <path d="M3 6h18" />
-                        <path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6" />
-                        <path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2" />
-                      </svg>
-                    </button>
+                    {comment.userId != null && comment.userId === currentUserId ? (
+                      <button onClick={() => handleDelete(comment.id)} className="text-gray-400 hover:text-red-500" aria-label="Eliminar comentario">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                          <path d="M3 6h18" />
+                          <path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6" />
+                          <path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2" />
+                        </svg>
+                      </button>
+                    ) : null}
                   </div>
                 </div>
               ))

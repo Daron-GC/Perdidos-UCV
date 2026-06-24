@@ -1,32 +1,204 @@
 
 "use client";
 
-import { useEffect, useState } from "react";
-import { CircleMarker, MapContainer, Popup, TileLayer, useMap } from "react-leaflet";
-import { LatLngExpression } from "leaflet";
+import { useEffect, useRef, useState } from "react";
+import { CircleMarker, MapContainer, Popup, TileLayer, useMap, useMapEvents } from "react-leaflet";
+import type { LatLngExpression, LeafletMouseEvent, Map as LeafletMap } from "leaflet";
 
-const CENTER: LatLngExpression = [10.4907341, -66.8900546];
+const CENTER: LatLngExpression = [10.4911, -66.8902];
+const BOUNDS: [[number, number], [number, number]] = [
+  [10.4812, -66.8959],
+  [10.4968, -66.8801],
+];
 
-function safeStopMap(map: any) {
+function safeStopMap(map: LeafletMap | null) {
   try {
     if (map?.stop) {
       map.stop();
     }
 
-    if (map?._panAnim?.stop) {
-      map._panAnim.stop();
+    const mapWithPanAnim = map as LeafletMap & { _panAnim?: { stop?: () => void } } | null;
+    if (mapWithPanAnim?._panAnim?.stop) {
+      mapWithPanAnim._panAnim.stop();
     }
   } catch {
     // Evitar errores si el mapa está en proceso de destrucción.
   }
 }
 
+function MapEvents({
+  onZoomChanged,
+}: {
+  onZoomChanged?: (zoom: number) => void;
+}) {
+  const map = useMapEvents({
+    zoomend() {
+      onZoomChanged?.(map.getZoom());
+    },
+  });
+
+  useEffect(() => {
+    if (!map) return;
+    onZoomChanged?.(map.getZoom());
+  }, [map, onZoomChanged]);
+
+  return null;
+}
+
+function MapLongPressHandler({
+  onLongPress,
+}: {
+  onLongPress?: (location: { lat: number; lng: number }) => void;
+}) {
+  const map = useMap();
+  const onLongPressRef = useRef(onLongPress);
+  const timerRef = useRef<number | null>(null);
+  const startPointRef = useRef<{ x: number; y: number } | null>(null);
+  const moveThreshold = 10;
+
+  useEffect(() => {
+    onLongPressRef.current = onLongPress;
+  }, [onLongPress]);
+
+  const clearTimer = () => {
+    if (timerRef.current) {
+      window.clearTimeout(timerRef.current);
+      timerRef.current = null;
+    }
+    startPointRef.current = null;
+  };
+
+  useEffect(() => {
+    if (!map) return;
+
+    const handleMouseDown = (event: LeafletMouseEvent) => {
+      startPointRef.current = {
+        x: event.originalEvent.clientX,
+        y: event.originalEvent.clientY,
+      };
+      timerRef.current = window.setTimeout(() => {
+        onLongPressRef.current?.({ lat: event.latlng.lat, lng: event.latlng.lng });
+        clearTimer();
+      }, 5000);
+    };
+
+    const handleMouseMove = (event: LeafletMouseEvent) => {
+      if (!timerRef.current || !startPointRef.current) return;
+      const distance = Math.hypot(
+        event.originalEvent.clientX - startPointRef.current.x,
+        event.originalEvent.clientY - startPointRef.current.y
+      );
+      if (distance > moveThreshold) {
+        clearTimer();
+      }
+    };
+
+    const handleMouseUp = () => {
+      clearTimer();
+    };
+
+    const handleMouseOut = () => {
+      clearTimer();
+    };
+
+    map.on({
+      mousedown: handleMouseDown,
+      mousemove: handleMouseMove,
+      mouseup: handleMouseUp,
+      mouseout: handleMouseOut,
+    });
+
+    return () => {
+      map.off({
+        mousedown: handleMouseDown,
+        mousemove: handleMouseMove,
+        mouseup: handleMouseUp,
+        mouseout: handleMouseOut,
+      });
+      clearTimer();
+    };
+  }, [map]);
+
+  useEffect(() => {
+    if (!map) return;
+    const container = map.getContainer();
+    if (!container) return;
+
+    const getTouchPoint = (touch: Touch) => {
+      const rect = container.getBoundingClientRect();
+      return {
+        x: touch.clientX - rect.left,
+        y: touch.clientY - rect.top,
+      };
+    };
+
+    const getTouchCoords = (touch: Touch) => ({
+      x: touch.clientX,
+      y: touch.clientY,
+    });
+
+    const handleTouchStart = (event: TouchEvent) => {
+      const touch = event.touches?.[0] ?? event.changedTouches?.[0];
+      if (!touch) return;
+      startPointRef.current = getTouchCoords(touch);
+      const point = getTouchPoint(touch);
+      const latlng = map.containerPointToLatLng([point.x, point.y]);
+      timerRef.current = window.setTimeout(() => {
+        onLongPressRef.current?.({ lat: latlng.lat, lng: latlng.lng });
+        clearTimer();
+      }, 5000);
+    };
+
+    const handleTouchMove = (event: TouchEvent) => {
+      if (!timerRef.current || !startPointRef.current) return;
+      const touch = event.touches?.[0] ?? event.changedTouches?.[0];
+      if (!touch) return;
+      const current = getTouchCoords(touch);
+      const distance = Math.hypot(
+        current.x - startPointRef.current.x,
+        current.y - startPointRef.current.y
+      );
+      if (distance > moveThreshold) {
+        clearTimer();
+      }
+    };
+
+    const handleTouchEnd = () => {
+      clearTimer();
+    };
+
+    const handleTouchCancel = () => {
+      clearTimer();
+    };
+
+    container.addEventListener("touchstart", handleTouchStart);
+    container.addEventListener("touchmove", handleTouchMove);
+    container.addEventListener("touchend", handleTouchEnd);
+    container.addEventListener("touchcancel", handleTouchCancel);
+
+    return () => {
+      container.removeEventListener("touchstart", handleTouchStart);
+      container.removeEventListener("touchmove", handleTouchMove);
+      container.removeEventListener("touchend", handleTouchEnd);
+      container.removeEventListener("touchcancel", handleTouchCancel);
+      clearTimer();
+    };
+  }, [map]);
+
+  return null;
+}
+
 function MapReadyHandler({
   onMapReady,
 }: {
-  onMapReady?: (map: any) => void;
+  onMapReady?: (map: LeafletMap) => void;
 }) {
   const map = useMap();
+  const onMapReadyRef = useRef(onMapReady);
+
+  useEffect(() => {
+    onMapReadyRef.current = onMapReady;
+  }, [onMapReady]);
 
   useEffect(() => {
     if (!map || !map.getContainer()) return;
@@ -38,10 +210,15 @@ function MapReadyHandler({
       requestAnimationFrame(() => {
         try {
           if (container.isConnected) {
-            map.invalidateSize();
+            map.invalidateSize(true);
+            setTimeout(() => {
+              try {
+                map.invalidateSize(true);
+              } catch {}
+            }, 250);
           }
         } catch {}
-        onMapReady?.(map);
+        onMapReadyRef.current?.(map);
       });
     };
 
@@ -124,30 +301,33 @@ function LocationTracker() {
 export default function MapLeaflet({
   children,
   onMapReady,
+  onZoomChanged,
+  onLongPress,
 }: {
   children?: React.ReactNode;
-  onMapReady?: (map: any) => void;
+  onMapReady?: (map: LeafletMap) => void;
+  onZoomChanged?: (zoom: number) => void;
+  onLongPress?: (location: { lat: number; lng: number }) => void;
 }) {
-  const bounds: [[number, number], [number, number]] = [
-    [10.478, -66.892],
-    [10.504, -66.861],
-  ];
-
   return (
     <MapContainer
       center={CENTER}
+      bounds={BOUNDS}
+      maxBounds={BOUNDS}
+      maxBoundsViscosity={0.9}
       zoom={16}
-      maxBounds={bounds}
-      maxBoundsViscosity={1.0}
-      zoomAnimation={false}
+      maxZoom={20}
+      zoomAnimation={true}
       fadeAnimation={false}
-      markerZoomAnimation={false}
+      markerZoomAnimation={true}
       zoomSnap={0}
       zoomDelta={1}
       style={{ height: "100%", width: "100%" }}
     >
       <TileLayer url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" />
       <MapReadyHandler onMapReady={onMapReady} />
+      <MapEvents onZoomChanged={onZoomChanged} />
+      <MapLongPressHandler onLongPress={onLongPress} />
       <LocationTracker />
       {children}
     </MapContainer>

@@ -1,65 +1,163 @@
 "use client";
 
-import { useState } from "react";
-import { Search, MapPin } from "lucide-react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { Search } from "lucide-react";
+import { useRouter } from "next/navigation";
+import { createClient } from "@/utils/supabase/client";
+import { useDebouncedValue } from "@/hooks/useDebouncedValue";
 
-const lugares = [
-  { id: 1, nombre: "Biblioteca Central", ubicacion: "Edificio A" },
-  { id: 2, nombre: "Cafetería Norte", ubicacion: "Edificio B" },
-  { id: 3, nombre: "Aula Magna", ubicacion: "Edificio C" },
-  { id: 4, nombre: "Laboratorio de Física", ubicacion: "Edificio D" },
-  { id: 5, nombre: "Jardín Botánico", ubicacion: "Zona Verde" },
-];
+type UbicacionResult = {
+  id: number;
+  nombre_ubicacion: string;
+};
 
 export default function DashboardSearch() {
+  const router = useRouter();
   const [query, setQuery] = useState("");
-  const [showResults, setShowResults] = useState(false);
+  const [results, setResults] = useState<UbicacionResult[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [showDropdown, setShowDropdown] = useState(false);
+  const [noResults, setNoResults] = useState(false);
+  const debouncedQuery = useDebouncedValue(query, 350);
+  const wrapperRef = useRef<HTMLDivElement>(null);
+  const supabase = useMemo(() => createClient(), []);
 
-  const resultados = lugares.filter((lugar) =>
-    lugar.nombre.toLowerCase().includes(query.toLowerCase())
+  const fetchUbicaciones = useCallback(
+    async (searchText: string) => {
+      if (!searchText) {
+        setResults([]);
+        setNoResults(false);
+        setLoading(false);
+        return;
+      }
+
+      setLoading(true);
+      const { data, error } = await supabase
+        .from("ubicaciones")
+        .select("id, nombre_ubicacion")
+        .ilike("nombre_ubicacion", `%${searchText}%`)
+        .limit(6);
+
+      setLoading(false);
+
+      if (error) {
+        console.error("Error al buscar ubicaciones:", error);
+        setResults([]);
+        setNoResults(false);
+        return;
+      }
+
+      const ubicaciones = (data ?? []) as UbicacionResult[];
+      setResults(ubicaciones);
+      setNoResults(ubicaciones.length === 0);
+    },
+    [supabase]
   );
 
+  useEffect(() => {
+    const searchText = debouncedQuery.trim();
+    if (!searchText) {
+      setResults([]);
+      setNoResults(false);
+      setLoading(false);
+      setShowDropdown(false);
+      return;
+    }
+
+    setShowDropdown(true);
+    let active = true;
+
+    const runSearch = async () => {
+      await fetchUbicaciones(searchText);
+      if (!active) return;
+      setShowDropdown(true);
+    };
+
+    runSearch();
+
+    return () => {
+      active = false;
+    };
+  }, [debouncedQuery, fetchUbicaciones]);
+
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (!wrapperRef.current) return;
+      if (event.target instanceof Node && !wrapperRef.current.contains(event.target)) {
+        setShowDropdown(false);
+      }
+    };
+
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
+
+  const handleSelect = (ubicacionId: number, nombreUbicacion: string) => {
+    setShowDropdown(false);
+    const params = new URLSearchParams({
+      ubicacionId: String(ubicacionId),
+      ubicacionNombre: nombreUbicacion,
+    });
+
+    router.push(`/mapa?${params.toString()}`);
+  };
+
   return (
-    <div className="space-y-4">
-      <div className="bg-white/95 backdrop-blur-xl border border-white/80 rounded-[2rem] shadow-[0_28px_70px_rgba(125,83,199,0.12)] p-4 flex items-center gap-3">
-        <div className="flex h-14 flex-1 items-center rounded-[1.75rem] border border-[#E6E0FF] bg-[#FBF8FF] px-4 text-sm text-slate-700 shadow-sm">
-          <Search size={20} className="text-[#A158FF]" />
-          <input
-            value={query}
-            onChange={(e) => setQuery(e.target.value)}
-            onFocus={() => setShowResults(true)}
-            placeholder="¿Qué buscas hoy?"
-            className="ml-3 w-full bg-transparent outline-none placeholder:text-slate-400"
-          />
-        </div>
-        <button
-          type="button"
-          onClick={() => setShowResults(true)}
-          className="inline-flex h-14 w-14 items-center justify-center rounded-[1.5rem] bg-[#7D53C7] text-white shadow-[0_18px_30px_rgba(125,83,199,0.2)] transition hover:bg-[#6c44c0]"
-        >
-          <MapPin size={20} />
-        </button>
+    <div ref={wrapperRef} className="relative w-full max-w-xl">
+      <div className="flex items-center gap-3 rounded-[1.75rem] border border-[#E6E0FF] bg-white/95 px-4 py-3 shadow-sm shadow-[#8161d71a] transition-colors duration-300 focus-within:border-[#A158FF] sm:px-5">
+        <Search size={20} className="text-[#8B5CF6]" />
+        <input
+          value={query}
+          onChange={(event) => {
+            setQuery(event.target.value);
+          }}
+          onFocus={() => {
+            if (query.trim().length > 0) {
+              setShowDropdown(true);
+            }
+          }}
+          placeholder="Buscar ubicaciones..."
+          className="min-w-0 flex-1 border-0 bg-transparent text-sm font-medium text-slate-900 outline-none placeholder:text-slate-400"
+        />
       </div>
 
-      {showResults && (
-        <div className="bg-white/95 border border-[#E5DBFF] rounded-[2rem] shadow-[0_18px_40px_rgba(125,83,199,0.1)] p-4">
-          <p className="text-sm font-semibold text-slate-500 mb-3">Resultados de búsqueda</p>
-          {query.trim().length === 0 ? (
-            <p className="text-sm text-slate-500">Escribe algo para buscar lugares en el campus.</p>
-          ) : resultados.length > 0 ? (
-            <ul className="space-y-3">
-              {resultados.map((lugar) => (
-                <li key={lugar.id} className="rounded-2xl border border-[#F1E9FF] bg-[#FAF7FF] p-3 text-sm font-medium text-slate-800">
-                  <div className="flex items-center justify-between gap-2">
-                    <span>{lugar.nombre}</span>
-                    <span className="text-xs text-[#7D53C7] font-semibold">{lugar.ubicacion}</span>
-                  </div>
-                </li>
-              ))}
-            </ul>
-          ) : (
-            <p className="text-sm text-slate-500">No se encontraron resultados para "{query}".</p>
-          )}
+      {showDropdown && (
+        <div className="absolute left-0 right-0 z-20 mt-2 overflow-hidden rounded-[1.5rem] border border-[#E5DBFF] bg-white/95 shadow-[0_24px_60px_rgba(125,83,199,0.16)]">
+          <div className="flex items-center justify-between gap-3 border-b border-[#F1E9FF] px-4 py-3 text-sm text-slate-500">
+            <span>Resultados</span>
+            {loading ? (
+              <span className="inline-flex items-center gap-2 text-[#7D53C7]">
+                <span className="h-2.5 w-2.5 animate-spin rounded-full border border-[#7D53C7] border-t-transparent" />
+                Cargando...
+              </span>
+            ) : (
+              <span className="text-xs text-slate-400">Sugerencias rápidas</span>
+            )}
+          </div>
+
+          <div className="max-h-72 overflow-y-auto">
+            {query.trim().length === 0 ? (
+              <div className="px-4 py-4 text-sm text-slate-500">Escribe para ver sugerencias.</div>
+            ) : loading ? (
+              <div className="px-4 py-4 text-sm text-slate-500">Buscando ubicaciones...</div>
+            ) : noResults ? (
+              <div className="px-4 py-4 text-sm text-slate-500">No se encontraron coincidencias para &quot;{query}&quot;.</div>
+            ) : (
+              <ul className="divide-y divide-[#F3EBFF]">
+                {results.map((ubicacion) => (
+                  <li key={ubicacion.id}>
+                    <button
+                      type="button"
+                      onClick={() => handleSelect(ubicacion.id, ubicacion.nombre_ubicacion)}
+                      className="w-full px-4 py-3 text-left text-sm font-medium text-slate-900 transition-colors duration-150 hover:bg-[#F4F0FF]"
+                    >
+                      {ubicacion.nombre_ubicacion}
+                    </button>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </div>
         </div>
       )}
     </div>

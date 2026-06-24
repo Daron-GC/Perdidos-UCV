@@ -25,8 +25,9 @@ export default function ProfilePage() {
   const [loading, setLoading] = useState(true);
   const router = useRouter();
   const supabase = createClient();
-  const [rating, setRating] = useState<number | null>(null);
+  const [rating, setRating] = useState<number | null>(0.0);
   const [commentsCount, setCommentsCount] = useState<number>(0);
+  const [likesCount, setLikesCount] = useState<number>(0);
   const [subtitle, setSubtitle] = useState<string>("Estudiante UCV");
 
   useEffect(() => {
@@ -34,12 +35,16 @@ export default function ProfilePage() {
       try {
         const profile = await getUserProfile();
         const displayName = profile.email || profile.username || "Usuario";
+        const subtitleText = profile.username && profile.username !== profile.email
+          ? profile.username
+          : "Estudiante UCV";
 
         setUsername(displayName);
         setEmail(profile.email ?? null);
-        setRating(profile.rating ?? null);
+        setRating(profile.rating ?? 0.0);
         setCommentsCount(profile.comments_count ?? 0);
-        setSubtitle(displayName || "Estudiante UCV");
+        setLikesCount(profile.likes_count ?? 0);
+        setSubtitle(subtitleText);
       } catch (e) {
         setUsername("Usuario");
         setEmail(null);
@@ -65,8 +70,8 @@ export default function ProfilePage() {
   if (loading) return <LoadingOverlay message="Cargando tu perfil..." />;
 
   return (
-    <div className="relative min-h-screen bg-gray-100 flex flex-col items-center">
-      <div className="w-full max-w-md md:max-w-2xl bg-white shadow-lg rounded-3xl mt-6 mb-24 p-6 md:p-10 flex flex-col items-center entry-card relative">
+    <div className="relative min-h-screen bg-[#F8F9FD] flex flex-col items-center">
+      <div className="w-full max-w-md md:max-w-2xl bg-white shadow-lg rounded-[36px] mt-6 mb-24 p-6 md:p-10 flex flex-col items-center entry-card relative overflow-hidden">
         <img
           src="/IMG-20260531-WA0042.jpg.jpeg"
           alt="logo Perdidos UCV"
@@ -74,33 +79,34 @@ export default function ProfilePage() {
         />
 
         {/* Avatar */}
-        <div className="flex flex-col items-center pop-in stagger-1">
+        <div className="flex flex-col items-center pop-in stagger-1 relative z-10">
           <div className="relative">
             <ProfileAvatar username={username} supabase={supabase} />
-            <div className="absolute -right-2 -top-2 bubble text-xs">VIP</div>
+            <div className="absolute -right-2 -top-2 rounded-2xl bg-[#A158FF] px-2 py-1 text-[10px] text-white font-bold shadow-sm">
+              VIP
+            </div>
           </div>
 
-          <h2 className="text-3xl comic-font text-gray-800 mt-3 tracking-wide fade-in-up stagger-2">
+          <h2 className="text-3xl comic-font text-[#2C2D4A] mt-3 tracking-wide fade-in-up stagger-2">
             {username}
           </h2>
 
           {email ? (
-            <p className="text-sm text-gray-500 mt-1 fade-in-up stagger-3">
+            <p className="text-sm text-[#5F5F75] mt-1 fade-in-up stagger-3">
               {email}
             </p>
           ) : null}
 
-          <p className="text-sm text-gray-500 mt-1 flex items-center gap-2 fade-in-up stagger-3">
-            <span className="font-medium">{subtitle}</span>
-            <span className="mx-1">•</span>
-            <span className="flex items-center">
-              <span className="text-yellow-500 mr-1">★</span>
-              {rating !== null ? rating.toFixed(1) : '—'} ({commentsCount} reseñas)
+          <p className="text-sm text-[#5F5F75] mt-1 flex flex-col gap-2 fade-in-up stagger-3 sm:flex-row sm:items-center">
+            <span className="font-semibold text-[#2C2D4A]">{subtitle}</span>
+            <span className="hidden sm:inline mx-1">•</span>
+            <span className="flex items-center gap-1 text-[#7D53C7]">
+              <span className="text-[#A158FF]">★</span>
+              {rating !== null ? rating.toFixed(1) : '—'}
             </span>
+            <span className="text-[#7B7B9E]">({commentsCount} reseñas • {likesCount} likes)</span>
           </p>
         </div>
-
-        {/* Editar perfil eliminado — solo se muestran botones solicitados */}
 
         {/* Lista de opciones con íconos SVG */}
         <div className="w-full mt-6 grid grid-cols-1 gap-4 md:grid-cols-2">
@@ -115,7 +121,7 @@ export default function ProfilePage() {
         {/* Cerrar sesión */}
         <button
           onClick={handleLogout}
-          className="mt-8 w-full bg-red-500 hover:bg-red-600 text-white font-bold py-3 rounded-2xl shadow-md transition active:scale-[0.98]"
+          className="mt-8 w-full bg-[#A158FF] hover:bg-[#7D53C7] text-white font-bold py-3 rounded-2xl shadow-lg shadow-[#7D53C7]/20 transition active:scale-[0.98]"
         >
           CERRAR SESIÓN
         </button>
@@ -150,9 +156,9 @@ function ProfileItem({
   return (
     <button
       onClick={handleClick}
-      className="w-full flex flex-col items-center justify-center gap-2 py-4 px-3 rounded-2xl bg-[#7D53C7] text-white font-bold border border-[#6b45b2] transition hover:brightness-105 active:scale-[0.99]"
+      className="w-full flex flex-col items-center justify-center gap-2 py-4 px-3 rounded-3xl bg-gradient-to-r from-[#7D53C7] via-[#A158FF] to-[#74DDD0] text-white font-bold border border-transparent shadow-lg shadow-[#7D53C7]/15 transition hover:shadow-[#7D53C7]/30 active:scale-[0.99]"
     >
-      <div className="flex items-center justify-center">
+      <div className="flex items-center justify-center rounded-full bg-white/15 p-3">
         {icon}
       </div>
       <span className="text-sm md:text-base">{label}</span>
@@ -223,7 +229,7 @@ function ProfileAvatar({
     <img
       src={avatarUrl || fallback}
       alt="Avatar"
-      className="w-28 h-28 md:w-32 md:h-32 rounded-full border-4 border-purple-200 shadow-md object-cover avatar-comic pop-in"
+      className="w-28 h-28 md:w-32 md:h-32 rounded-full border-4 border-[#8CBFED]/40 shadow-[0_18px_45px_rgba(140,191,237,0.18)] object-cover avatar-comic pop-in"
     />
   );
 }

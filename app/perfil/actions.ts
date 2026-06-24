@@ -64,23 +64,35 @@ export async function getUserProfile() {
 
   const { data: commentsData, error: commentsError } = await supabase
     .from('comentarios')
-    .select('id, like')
+    .select('id')
     .eq('user_id', userId)
 
   if (!commentsError && commentsData) {
-    commentsCount = commentsData.length
-    likesCount = commentsData.filter((comment) => comment.like === true).length
+    const commentIds = (commentsData as Array<{ id: number }>).map((comment) => comment.id)
+    commentsCount = commentIds.length
+
+    if (commentIds.length > 0) {
+      const { data: likesData, error: likesError } = await supabase
+        .from('like')
+        .select('id')
+        .in('id_comentario', commentIds)
+
+      if (!likesError && likesData) {
+        likesCount = likesData.length
+      }
+    }
   }
 
-  const rating = commentsCount > 0
-    ? Number(((likesCount / commentsCount) * 5).toFixed(1))
-    : null
+  const rating = likesCount > 0
+    ? Number((likesCount / 10).toFixed(1))
+    : 0.0
 
   return {
     email: usuarioData.email,
     username: usuarioData.email,
     rating,
     comments_count: commentsCount,
+    likes_count: likesCount,
     error: null,
   }
 }

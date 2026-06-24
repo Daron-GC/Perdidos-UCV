@@ -30,7 +30,7 @@ export default function MainMap({
 
   return (
     <MapContainer
-      center={[10.491, -66.881]}
+      center={[10.4911, -66.8902]}
       zoom={16}
       maxBounds={bounds}
       maxBoundsViscosity={1.0}
