@@ -13,6 +13,8 @@ export async function getUserProfile() {
       username: null,
       rating: null,
       comments_count: 0,
+      likes_count: 0,
+      faculty_name: null,
       error: 'No autenticado',
     }
   }
@@ -25,13 +27,15 @@ export async function getUserProfile() {
       username: null,
       rating: null,
       comments_count: 0,
+      likes_count: 0,
+      faculty_name: null,
       error: 'No hay email en la sesión',
     }
   }
 
   const { data: usuarioData, error: usuarioError } = await supabase
     .from('usuario')
-    .select('id, email')
+    .select('id, email, facultad_id')
     .eq('email', authEmail)
     .maybeSingle()
 
@@ -43,6 +47,8 @@ export async function getUserProfile() {
       username: emailFromTable ?? authEmail,
       rating: null,
       comments_count: 0,
+      likes_count: 0,
+      faculty_name: null,
       error: 'Error al consultar la tabla usuario',
     }
   }
@@ -53,11 +59,24 @@ export async function getUserProfile() {
       username: authEmail,
       rating: null,
       comments_count: 0,
+      likes_count: 0,
+      faculty_name: null,
       error: 'No existe el usuario en public.usuario',
     }
   }
 
   const userId = usuarioData.id
+  let facultyName: string | null = null
+
+  if (usuarioData.facultad_id) {
+    const { data: facultadData } = await supabase
+      .from('ubicaciones')
+      .select('nombre_ubicacion')
+      .eq('id', usuarioData.facultad_id)
+      .maybeSingle()
+
+    facultyName = facultadData?.nombre_ubicacion ?? null
+  }
 
   let commentsCount = 0
   let likesCount = 0
@@ -93,6 +112,7 @@ export async function getUserProfile() {
     rating,
     comments_count: commentsCount,
     likes_count: likesCount,
+    faculty_name: facultyName,
     error: null,
   }
 }

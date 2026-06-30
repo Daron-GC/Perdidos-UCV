@@ -1,0 +1,17 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128" width="100%" height="100%">
+  <defs>
+    <linearGradient id="mystery-grad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#7D53C7" />
+      <stop offset="100%" stop-color="#74DDD0" />
+    </linearGradient>
+    <filter id="shadow" x="-10%" y="-10%" width="120%" height="120%">
+      <feDropShadow dx="0" dy="4" stdDeviation="3" flood-color="#000000" flood-opacity="0.15" />
+    </filter>
+  </defs>
+  <circle cx="64" cy="64" r="60" fill="url(#mystery-grad)" />
+  <g filter="url(#shadow)">
+    <path d="M28,110 C28,90 40,78 64,78 C88,78 100,90 100,110 Z" fill="#FFFFFF" />
+    <circle cx="64" cy="50" r="20" fill="#FFFFFF" />
+  </g>
+  <text x="64" y="58" font-family="system-ui, sans-serif" font-size="24" font-weight="900" fill="#7D53C7" text-anchor="middle">?</text>
+</svg>

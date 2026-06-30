@@ -1,0 +1,21 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128" width="100%" height="100%">
+  <defs>
+    <linearGradient id="vet-grad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#ED213A" />
+      <stop offset="100%" stop-color="#93291E" />
+    </linearGradient>
+    <filter id="shadow" x="-10%" y="-10%" width="120%" height="120%">
+      <feDropShadow dx="0" dy="4" stdDeviation="3" flood-color="#000000" flood-opacity="0.15" />
+    </filter>
+  </defs>
+  <circle cx="64" cy="64" r="60" fill="url(#vet-grad)" />
+  <g filter="url(#shadow)">
+    <path d="M28,110 C28,90 40,78 64,78 C88,78 100,90 100,110 Z" fill="#FFFFFF" />
+    <circle cx="64" cy="50" r="20" fill="#FFFFFF" />
+    <circle cx="64" cy="94" r="7" fill="#ED213A" />
+    <circle cx="53" cy="85" r="4" fill="#ED213A" />
+    <circle cx="60" cy="79" r="4.5" fill="#ED213A" />
+    <circle cx="68" cy="79" r="4.5" fill="#ED213A" />
+    <circle cx="75" cy="85" r="4" fill="#ED213A" />
+  </g>
+</svg>

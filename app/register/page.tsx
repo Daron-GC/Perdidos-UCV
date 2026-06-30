@@ -41,6 +41,7 @@ export default function Register() {
       return;
     }
 
+    setIsLoading(false);
     if (data.user) {
       try {
         const { error: usuarioError } = await supabase
@@ -67,17 +68,15 @@ export default function Register() {
       }
 
       if (data.session) {
-        await router.push("/mapa");
+        router.push("/mapa");
       } else {
         alert("Revisa tu correo para confirmar la cuenta. Luego inicia sesión.");
-        await router.push("/");
+        router.push("/");
       }
     } else {
       alert("Registro exitoso. Revisa tu correo o intenta iniciar sesión.");
-      await router.push("/");
+      router.push("/");
     }
-
-    setIsLoading(false);
   };
 
   return (
@@ -186,12 +185,9 @@ export default function Register() {
           <button
             onClick={handleRegister}
             disabled={isLoading}
-            className="relative w-full mt-2 bg-[#007BFF] text-white font-bold italic tracking-wide text-lg py-3.5 rounded-2xl shadow-md hover:bg-[#0069d9] transition-all active:scale-[0.98] flex items-center justify-center disabled:opacity-50"
+            className="w-full mt-2 bg-gradient-to-r from-[#7D53C7] to-[#A158FF] text-white text-base font-black py-4 rounded-2xl shadow-lg shadow-[#7D53C7]/20 hover:shadow-xl hover:shadow-[#7D53C7]/30 hover:scale-[1.01] active:scale-[0.98] transition-all flex items-center justify-center gap-2 disabled:opacity-50"
           >
             CREAR CUENTA
-            <svg className="btn-lines w-5 h-5 text-white/80" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" d="M12 3v3m4.5-1.5l-2.5 2.5m5.5 2h-3" />
-            </svg>
           </button>
 
           <div className="text-center mt-3 text-[14px]">
@@ -204,9 +200,8 @@ export default function Register() {
             </Link>
           </div>
         </div>
-
-        {isLoading && <LoadingOverlay message="Creando tu cuenta..." />}
       </div>
+      {isLoading && <LoadingOverlay message="Creando tu cuenta..." />}
     </div>
   );
 }

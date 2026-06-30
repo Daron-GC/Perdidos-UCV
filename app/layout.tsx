@@ -31,7 +31,9 @@ export default function RootLayout({
       className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
     >
       <body className="min-h-full flex flex-col app-bg">
-        <main className="flex-1">{children}</main>
+        <main className="flex-1" style={{ paddingBottom: "calc(env(safe-area-inset-bottom) + 84px)" }}>
+          {children}
+        </main>
         <FAB />
         <BottomNav />
       </body>

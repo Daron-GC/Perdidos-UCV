@@ -29,17 +29,17 @@ export default function Login() {
       });
 
       if (authError) {
-        alert("Correo o contraseña incorrectos.");
         setIsLoading(false);
+        alert("Correo o contraseña incorrectos.");
         return;
       }
 
-      await router.push("/mapa");
+      setIsLoading(false);
+      router.push("/mapa");
     } catch (error) {
       console.error("Error al iniciar sesión:", error);
-      alert("Ocurrió un error al iniciar sesión.");
-    } finally {
       setIsLoading(false);
+      alert("Ocurrió un error al iniciar sesión.");
     }
   };
 
@@ -100,7 +100,7 @@ export default function Login() {
           <button
             onClick={handleLogin}
             disabled={isLoading}
-            className="w-full bg-[#007BFF] text-white text-xl font-bold py-4 rounded-2xl shadow-lg hover:bg-blue-600 active:scale-[0.98] transition-all flex items-center justify-center gap-2 disabled:opacity-50"
+            className="w-full bg-gradient-to-r from-[#7D53C7] to-[#A158FF] text-white text-xl font-bold py-4 rounded-2xl shadow-lg shadow-[#7D53C7]/20 hover:shadow-xl hover:shadow-[#7D53C7]/30 hover:scale-[1.01] active:scale-[0.98] transition-all flex items-center justify-center gap-2 disabled:opacity-50"
           >
             INGRESAR
           </button>
@@ -116,12 +116,10 @@ export default function Login() {
           </div>
         </div>
 
-        {isLoading && <LoadingOverlay message="Iniciando sesión..." />}
-
-        {/* Decoraciones inferiores */}
         <div className="fixed bottom-0 left-0 w-32 h-24 bg-[#74DDD0] rounded-tr-[70px] z-0 opacity-90"></div>
         <div className="fixed bottom-0 right-0 w-40 h-32 bg-[#D1A6FF] rounded-tl-[80px] z-0 opacity-80"></div>
       </div>
+      {isLoading && <LoadingOverlay message="Iniciando sesión..." />}
     </div>
   );
 }

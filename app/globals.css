@@ -1,4 +1,4 @@
-@import url('https://fonts.googleapis.com/css2?family=Luckiest+Guy&family=Poppins:wght@300;400;600&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Luckiest+Guy&family=Poppins:wght@300;400;600&display=swap');
 @import "tailwindcss";
 
 :root {
@@ -17,9 +17,83 @@
 }
 
 body {
-  background: var(--background);
+  background: radial-gradient(circle at top left, rgba(161,94,255,0.08), transparent 22%),
+              radial-gradient(circle at 90% 10%, rgba(116,221,208,0.06), transparent 15%),
+              linear-gradient(180deg, #FAF8FF 0%, #FFFFFF 100%);
   color: var(--foreground);
   font-family: 'Poppins', Arial, Helvetica, sans-serif;
+}
+
+.app-bg {
+  background: radial-gradient(circle at top left, rgba(161,94,255,0.08), transparent 12%),
+              radial-gradient(circle at 92% 8%, rgba(116,221,208,0.08), transparent 10%),
+              linear-gradient(180deg, #F8F7FF 0%, #FFFFFF 100%);
+}
+
+.glass-panel {
+  background: rgba(255,255,255,0.78);
+  backdrop-filter: blur(18px);
+  border: 1px solid rgba(255,255,255,0.9);
+}
+
+.card-surface {
+  background: white;
+  border-radius: 32px;
+  border: 1px solid rgba(125,83,199,0.10);
+  box-shadow: 0 30px 75px rgba(83,97,255,0.10);
+}
+
+.button-glow {
+  transition: transform .2s ease, box-shadow .2s ease, filter .2s ease;
+}
+
+.button-glow:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 18px 40px rgba(116,221,208,0.20);
+  filter: saturate(1.08);
+}
+
+.button-pulse {
+  position: relative;
+}
+
+.button-pulse::before {
+  content: '';
+  position: absolute;
+  inset: -6px;
+  border-radius: 26px;
+  background: radial-gradient(circle at top left, rgba(116,221,208,0.22), transparent 45%);
+  opacity: 0;
+  transition: opacity .25s ease, transform .25s ease;
+}
+
+.button-pulse:hover::before {
+  opacity: 1;
+  transform: scale(1.05);
+}
+
+.button-pulse:active::before {
+  opacity: 0.65;
+  transform: scale(1);
+}
+
+.section-headline {
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  font-size: 0.78rem;
+  font-weight: 700;
+  color: #7D53C7;
+}
+
+.panel-soft {
+  background: #F8F7FF;
+  border: 1px solid rgba(125,83,199,0.08);
+  border-radius: 28px;
+}
+
+.text-hero {
+  font-family: 'Luckiest Guy', 'Poppins', sans-serif;
+  letter-spacing: -0.03em;
 }
 
 /* Estilos juveniles / cómic */
@@ -45,6 +119,14 @@ body {
   background: radial-gradient(circle at 30% 30%, rgba(125,83,199,0.18), transparent 40%);
 }
 
+@media (max-width: 640px) {
+  .nav-active::after {
+    width: 28px; height: 28px; bottom: -6px;
+    background: radial-gradient(circle at 30% 30%, rgba(125,83,199,0.14), transparent 40%);
+  }
+  .comic-font { font-size: 14px; }
+}
+
 /* small helper for comic avatar border */
 .avatar-comic { border: 6px solid rgba(161,94,255,0.12); box-shadow: 0 10px 30px rgba(125,83,199,0.18); }
 
@@ -52,6 +134,17 @@ body {
 @keyframes fadeInUp {
   from { opacity: 0; transform: translateY(12px); }
   to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes fall {
+  0% { transform: translateY(-12px) rotate(0deg); opacity: 0; }
+  20% { opacity: 1; }
+  100% { transform: translateY(120px) rotate(360deg); opacity: 0; }
+}
+
+@keyframes pulseGold {
+  0%, 100% { transform: scale(1); box-shadow: 0 0 0 0 rgba(245, 158, 11, 0.3); }
+  50% { transform: scale(1.04); box-shadow: 0 0 0 10px rgba(245, 158, 11, 0); }
 }
 @keyframes popIn {
   0% { opacity: 0; transform: scale(.8); }
@@ -172,6 +265,21 @@ body {
   to { opacity: 1; transform: translateY(0); }
 }
 
+.hunt-banner {
+  background: rgba(255,255,255,0.78);
+  backdrop-filter: blur(16px);
+  border: 1px solid rgba(255,255,255,0.85);
+  box-shadow: 0 24px 60px rgba(125,83,199,0.14);
+}
+
+.animate-confetti {
+  animation: fall 1.2s linear forwards;
+}
+
+.medal-unlocked {
+  animation: pulseGold 1.6s ease-in-out infinite;
+}
+
 /* Botón estilo cómic */
 .btn-comic {
   background: linear-gradient(90deg,var(--brand),var(--accent-1));
@@ -205,3 +313,24 @@ body {
   background: linear-gradient(135deg,var(--accent-2),var(--brand)); color: white; box-shadow: 0 8px 18px rgba(125,83,199,0.18);
 }
 .icon-btn:active { transform: scale(.96); }
+
+/* Glow animation for favorite button */
+@keyframes glowAqua {
+  0% { box-shadow: 0 0 0 rgba(75,195,165,0); transform: translateY(0); }
+  40% { box-shadow: 0 10px 30px rgba(75,195,165,0.18); transform: translateY(-2px); }
+  100% { box-shadow: 0 0 0 rgba(75,195,165,0); transform: translateY(0); }
+}
+
+.glow-on-hover-aqua > div {
+  transition: transform .18s ease, box-shadow .18s ease, filter .18s ease;
+}
+.glow-on-hover-aqua:hover > div,
+.glow-on-hover-aqua:focus-visible > div {
+  animation: glowAqua 1.2s ease-in-out infinite;
+  filter: saturate(1.1) contrast(1.05);
+}
+.glow-on-hover-aqua:active > div { transform: translateY(0); }
+
+/* small accessibility hint for keyboard */
+.glow-on-hover-aqua:focus-visible { outline: 3px solid rgba(75,195,165,0.16); border-radius: 18px; }
+

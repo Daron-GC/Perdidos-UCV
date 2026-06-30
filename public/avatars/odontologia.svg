@@ -1,0 +1,18 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128" width="100%" height="100%">
+  <defs>
+    <linearGradient id="odo-grad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#4A00E0" />
+      <stop offset="100%" stop-color="#8E2DE2" />
+    </linearGradient>
+    <filter id="shadow" x="-10%" y="-10%" width="120%" height="120%">
+      <feDropShadow dx="0" dy="4" stdDeviation="3" flood-color="#000000" flood-opacity="0.15" />
+    </filter>
+  </defs>
+  <circle cx="64" cy="64" r="60" fill="url(#odo-grad)" />
+  <g filter="url(#shadow)">
+    <path d="M28,110 C28,90 40,78 64,78 C88,78 100,90 100,110 Z" fill="#FFFFFF" />
+    <circle cx="64" cy="50" r="20" fill="#FFFFFF" />
+    <path d="M64,80 C58,80 52,82 52,90 C52,98 54,106 57,110 C58,112 60,113 61,111 C62,109 61,106 61,102 C61,97 64,95 64,95 S67,97 67,102 C67,106 66,109 67,111 C68,113 70,112 71,110 C74,106 76,98 76,90 C76,82 70,80 64,80 Z" fill="#E2E8F0" stroke="#4A00E0" stroke-width="2" />
+    <path d="M57,86 c3,-3 6,-1 6,2" fill="none" stroke="#4A00E0" stroke-width="2" stroke-linecap="round" />
+  </g>
+</svg>

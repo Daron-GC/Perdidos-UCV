@@ -138,42 +138,7 @@ export default function MapPage() {
         </button>
       </div>
 
-      {/* Bottom Navigation Bar */}
-      <div className="absolute bottom-0 inset-x-0 bg-white rounded-t-3xl shadow-[0_-10px_20px_rgba(0,0,0,0.03)] z-30 px-8 pt-4 pb-8 flex justify-between items-center">
-        
-        <button 
-          aria-label="Capas" 
-          className="flex flex-col items-center gap-1.5 w-16"
-        >
-          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className="w-7 h-7 text-cyan-400">
-            <path fillRule="evenodd" d="M11.54 22.351l.07.04.028.016a.76.76 0 00.723 0l.028-.015.071-.041a16.975 16.975 0 001.144-.742 19.58 19.58 0 002.683-2.282c1.944-1.99 3.963-4.98 3.963-8.827a8.25 8.25 0 00-16.5 0c0 3.846 2.02 6.837 3.963 8.827a19.58 19.58 0 002.682 2.282 16.975 16.975 0 001.145.742zM12 13.5a3 3 0 100-6 3 3 0 000 6z" clipRule="evenodd" />
-          </svg>
-          <span className="text-[11px] font-bold text-cyan-500 tracking-wide">Mapa</span>
-        </button>
-
-        {/* TODO: Navegar a favoritos */}
-        <button 
-          aria-label="Favoritos"
-          className="flex flex-col items-center gap-1.5 w-16 group"
-        >
-          <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth="1.5" stroke="currentColor" className="w-7 h-7 text-gray-400 group-hover:text-gray-600 transition-colors">
-            <path strokeLinecap="round" strokeLinejoin="round" d="M21 8.25c0-2.485-2.099-4.5-4.688-4.5-1.935 0-3.597 1.126-4.312 2.733-.715-1.607-2.377-2.733-4.313-2.733C5.1 3.75 3 5.765 3 8.25c0 7.22 9 12 9 12s9-4.78 9-12Z" />
-          </svg>
-          <span className="text-[11px] font-medium text-gray-500 group-hover:text-gray-700 transition-colors tracking-wide">Favoritos</span>
-        </button>
-
-        {/* TODO: Navegar al perfil */}
-        <button 
-          aria-label="Perfil"
-          className="flex flex-col items-center gap-1.5 w-16 group"
-        >
-          <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth="1.5" stroke="currentColor" className="w-7 h-7 text-gray-400 group-hover:text-gray-600 transition-colors">
-            <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 6a3.75 3.75 0 1 1-7.5 0 3.75 3.75 0 0 1 7.5 0ZM4.501 20.118a7.5 7.5 0 0 1 14.998 0A17.933 17.933 0 0 1 12 21.75c-2.676 0-5.216-.584-7.499-1.632Z" />
-          </svg>
-          <span className="text-[11px] font-medium text-gray-500 group-hover:text-gray-700 transition-colors tracking-wide">Perfil</span>
-        </button>
-
-      </div>
+      {/* Bottom nav removed per user request */}
     </div>
   );
 }

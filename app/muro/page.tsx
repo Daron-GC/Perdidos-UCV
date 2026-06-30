@@ -218,6 +218,8 @@ const loadUserEmailsByIds = async (
 
 const FAVORITES_STORAGE_KEY = "perdidos_ucv_favoritos";
 
+
+
 type FavoriteItem = {
   ubicacionId: number;
   nombre: string;
@@ -818,14 +820,54 @@ export default function CommentsScreen() {
   };
 
   return (
-    <main className="relative min-h-screen overflow-x-hidden bg-[#EEF7F2]">
+    <>
+      <style jsx global>{`
+        @keyframes logoEntrance {
+          0% {
+            opacity: 0;
+            transform: translate(-50%, -50%) translateY(12px) scale(0.94);
+          }
+          60% {
+            opacity: 1;
+            transform: translate(-50%, -50%) translateY(-2px) scale(1.02);
+          }
+          100% {
+            opacity: 1;
+            transform: translate(-50%, -50%) translateY(0) scale(1);
+          }
+        }
+
+        @keyframes logoFloat {
+          0%,
+          100% {
+            transform: translateY(0px);
+          }
+          50% {
+            transform: translateY(-4px);
+          }
+        }
+      `}</style>
+      <main className="relative min-h-screen overflow-x-hidden bg-[#EEF7F2]">
       <div className="absolute inset-0 z-0 bg-[#EEF7F2]">
         <div className="absolute inset-0 bg-[radial-gradient(circle_at_top,_rgba(255,255,255,0.85),_transparent_22%)]" />
         <svg className="h-full w-full" viewBox="0 0 400 300" fill="none" preserveAspectRatio="none">
-          <path d="M-20 50C60 80 100 20 180 60C260 100 300 20 420 80" stroke="#DDEED8" strokeWidth="28" strokeLinecap="round" />
-          <path d="M-20 180C50 140 120 220 200 170C260 130 320 190 420 140" stroke="#DDEED8" strokeWidth="24" strokeLinecap="round" />
-          <path d="M40 -20C80 60 120 100 80 320" stroke="#E7F5E4" strokeWidth="18" strokeLinecap="round" />
-          <path d="M260 -20C240 60 310 120 290 320" stroke="#E7F5E4" strokeWidth="20" strokeLinecap="round" />
+          <defs>
+            <linearGradient id="softGradientA" x1="0%" y1="0%" x2="100%" y2="100%">
+              <stop offset="0%" stopColor="#F8FFF8" />
+              <stop offset="100%" stopColor="#CBE3C0" />
+            </linearGradient>
+            <linearGradient id="softGradientB" x1="0%" y1="0%" x2="100%" y2="100%">
+              <stop offset="0%" stopColor="#E6F5E2" />
+              <stop offset="100%" stopColor="#B7D7A8" />
+            </linearGradient>
+          </defs>
+          <circle cx="88" cy="72" r="92" fill="#F9FFF7" opacity="0.9" />
+          <circle cx="320" cy="54" r="116" fill="#EAF7E7" opacity="0.85" />
+          <path d="M-24 62C60 36 100 12 178 52C258 92 318 42 422 82" stroke="url(#softGradientA)" strokeWidth="30" strokeLinecap="round" />
+          <path d="M-20 176C56 152 128 220 198 178C264 138 318 190 422 148" stroke="#DDEED8" strokeWidth="24" strokeLinecap="round" />
+          <path d="M36 -16C78 62 112 100 82 320" stroke="url(#softGradientB)" strokeWidth="18" strokeLinecap="round" />
+          <path d="M268 -16C248 64 312 124 292 320" stroke="#E7F5E4" strokeWidth="20" strokeLinecap="round" />
+          <path d="M92 252C150 220 210 228 246 248" stroke="#D4EBC6" strokeWidth="8" strokeLinecap="round" opacity="0.8" />
         </svg>
       </div>
 
@@ -835,14 +877,22 @@ export default function CommentsScreen() {
             isVisible ? "translate-y-0 opacity-100" : "translate-y-6 opacity-0"
           }`}
         >
-        <div className="relative h-[180px] overflow-hidden bg-[#EAF7E8]">
-          <div className="absolute inset-0 opacity-70">
-            <svg className="h-full w-full" viewBox="0 0 400 300" fill="none">
-              <path d="M-20 50C60 80 100 20 180 60C260 100 300 20 420 80" stroke="#DDEED8" strokeWidth="28" strokeLinecap="round" />
-              <path d="M-20 180C50 140 120 220 200 170C260 130 320 190 420 140" stroke="#DDEED8" strokeWidth="24" strokeLinecap="round" />
-              <path d="M40 -20C80 60 120 100 80 320" stroke="#E7F5E4" strokeWidth="18" strokeLinecap="round" />
-              <path d="M260 -20C240 60 310 120 290 320" stroke="#E7F5E4" strokeWidth="20" strokeLinecap="round" />
-            </svg>
+        <div className="relative h-[128px] overflow-hidden bg-[#F4FBF4]">
+          <div className="absolute inset-0 bg-[linear-gradient(135deg,_#FDFEFD_0%,_#EAF8E8_45%,_#E8DDFE_100%)]" />
+          <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_left,_rgba(161,88,255,0.2),_transparent_55%),_radial-gradient(circle_at_bottom_right,_rgba(116,221,208,0.15),_transparent_60%)]" />
+          <div className="absolute right-8 top-4 h-20 w-20 rounded-full bg-[#8B5CF6]/15 blur-2xl" />
+          <div className="absolute left-8 bottom-3 h-16 w-16 rounded-full bg-[#22C55E]/15 blur-2xl" />
+
+          <div
+            className="absolute left-1/2 top-1/2 z-10 flex -translate-x-1/2 -translate-y-1/2 items-center rounded-full border border-white/70 bg-white/70 p-1.5 shadow-[0_10px_30px_rgba(124,58,237,0.12)] backdrop-blur-md"
+            style={{ animation: "logoEntrance 700ms ease-out both" }}
+          >
+            <img
+              src="/IMG-20260531-WA0042.jpg.jpeg"
+              alt="Logo Perdidos UCV"
+              className="h-14 w-14 rounded-full object-cover shadow-lg"
+              style={{ animation: "logoFloat 3.2s ease-in-out infinite" }}
+            />
           </div>
 
           <div className="absolute left-4 top-4 z-10">
@@ -859,17 +909,41 @@ export default function CommentsScreen() {
             </button>
           </div>
 
-          <div className="absolute right-4 top-4 z-10">
+          <div className="absolute right-4 top-6 z-10">
             <button
               type="button"
               onClick={handleToggleFavorite}
               disabled={!locationId}
               aria-label={isFavorite ? "Quitar de favoritos" : "Agregar a favoritos"}
-              className={`flex h-12 w-12 items-center justify-center rounded-full bg-white shadow-md transition hover:-translate-y-0.5 active:scale-95 ${
-                isFavorite ? "text-[#EF4444]" : "text-[#111827]"
-              } ${!locationId ? "cursor-not-allowed opacity-60" : "hover:shadow-lg"}`}
+              className={`group flex h-12 w-12 items-center justify-center rounded-full border bg-white/90 backdrop-blur-md transition-all duration-300 active:scale-95 ${
+                isFavorite
+                  ? "scale-105 border-[#A158FF]/50 shadow-[0_8px_24px_rgba(161,88,255,0.25)]"
+                  : "border-slate-100/60 shadow-[0_8px_30px_rgb(0,0,0,0.06)] hover:-translate-y-0.5 hover:shadow-xl hover:shadow-[#A158FF]/10"
+              } ${!locationId ? "cursor-not-allowed opacity-60" : ""}`}
             >
-              <HeartIcon filled={isFavorite} />
+              <svg
+                width="24"
+                height="24"
+                viewBox="0 0 24 24"
+                className={`transition-all duration-300 ${
+                  isFavorite
+                    ? "scale-110 stroke-[#7D53C7] fill-[url(#brand-heart-grad)]"
+                    : "stroke-slate-700 fill-none group-hover:scale-110 group-hover:stroke-[#A158FF] group-hover:fill-[#A158FF]/10"
+                }`}
+              >
+                <defs>
+                  <linearGradient id="brand-heart-grad" x1="0%" y1="0%" x2="100%" y2="100%">
+                    <stop offset="0%" stopColor="#A158FF" />
+                    <stop offset="100%" stopColor="#7D53C7" />
+                  </linearGradient>
+                </defs>
+                <path
+                  strokeWidth="2"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  d="M20.8 4.6c-1.5-1.6-4-1.7-5.6-.1L12 7.7l-3.2-3.2C7.2 2.9 4.7 3 3.2 4.6c-1.7 1.8-1.6 4.7.2 6.4L12 19.5l8.6-8.5c1.8-1.8 1.9-4.6.2-6.4z"
+                />
+              </svg>
             </button>
           </div>
         </div>
@@ -898,7 +972,7 @@ export default function CommentsScreen() {
             </button>
 
             <div className="flex flex-1 flex-col">
-              <h1 className="text-[28px] leading-[1] text-black uppercase" style={{ fontFamily: "Comic Sans MS, cursive" }}>
+              <h1 className="text-[28px] leading-[1] text-black uppercase" style={{ fontFamily: 'Inter, sans-serif' }}>
                 {locationData.name}
               </h1>
 
@@ -1011,8 +1085,12 @@ export default function CommentsScreen() {
                   </div>
 
                   <div className="flex flex-col gap-4 rounded-[24px] bg-white p-4 shadow-sm sm:flex-row sm:items-start">
-                    <div className="flex h-16 w-16 items-center justify-center rounded-[22px] bg-[#EFF6FF] text-3xl shadow-inner">
-                      {pinnedComment.avatar}
+                    <div className="flex h-16 w-16 items-center justify-center overflow-hidden rounded-[22px] bg-[#EFF6FF] shadow-inner">
+                      <img
+                        src="/avatars/misterio.svg"
+                        alt="Avatar"
+                        className="h-full w-full object-cover bg-white"
+                      />
                     </div>
                     <div className="flex-1">
                       <div className="mb-3 flex flex-wrap items-center gap-2">
@@ -1048,8 +1126,12 @@ export default function CommentsScreen() {
                           : "border-[#F3F4F6] bg-white"
                       }`}>
                       <div className="flex gap-3">
-                        <div className="flex h-12 w-12 items-center justify-center rounded-full bg-[#E9D5FF] text-2xl shadow-sm">
-                          {comment.avatar}
+                        <div className="flex h-12 w-12 items-center justify-center overflow-hidden rounded-full bg-[#E9D5FF] shadow-sm">
+                          <img
+                            src="/avatars/misterio.svg"
+                            alt="Avatar"
+                            className="h-full w-full object-cover bg-white"
+                          />
                         </div>
                         <div>
                           <div className="flex flex-wrap items-center gap-2">
@@ -1095,8 +1177,12 @@ export default function CommentsScreen() {
                       : "border-[#F3F4F6] bg-white"
                   }`}>
                   <div className="flex gap-3">
-                    <div className="flex h-12 w-12 items-center justify-center rounded-full bg-[#E9D5FF] text-2xl shadow-sm">
-                      {comment.avatar}
+                    <div className="flex h-12 w-12 items-center justify-center overflow-hidden rounded-full bg-[#E9D5FF] shadow-sm">
+                      <img
+                        src="/avatars/misterio.svg"
+                        alt="Avatar"
+                        className="h-full w-full object-cover bg-white"
+                      />
                     </div>
                     <div>
                       <div className="flex flex-wrap items-center gap-2">
@@ -1194,5 +1280,6 @@ export default function CommentsScreen() {
         </div>
       ) : null}
     </main>
+    </>
   );
 }

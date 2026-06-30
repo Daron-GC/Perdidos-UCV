@@ -105,25 +105,28 @@ export default function FavoritosPage() {
   };
 
   return (
-    <main className="min-h-screen bg-[#F8F9FD] py-10 px-4 sm:px-6 lg:px-8">
+    <main className="min-h-screen app-bg py-10 px-4 sm:px-6 lg:px-8">
       <div className="mx-auto max-w-4xl">
-        <section className="mb-10 overflow-hidden rounded-[32px] border border-[#EDE9FE] bg-gradient-to-r from-[#A158FF] via-[#7D53C7] to-[#74DDD0] p-8 shadow-[0_30px_80px_rgba(125,83,199,0.16)] text-white">
-          <div className="flex flex-col gap-6 sm:flex-row sm:items-center sm:justify-between">
-            <div className="space-y-3">
-              <div className="inline-flex items-center gap-3 rounded-full bg-white/15 px-4 py-2 text-sm font-semibold uppercase tracking-[0.18em] text-white/95">
-                <FavoriteBadgeIcon className="text-white" />
-                Guardados
+        <section className="mb-10 overflow-hidden rounded-[32px] border border-white/15 bg-gradient-to-r from-[#4f21a8] via-[#7c3aed] to-[#22c55e] p-7 shadow-[0_30px_90px_rgba(15,23,42,0.25)] text-white">
+          <div className="relative overflow-hidden rounded-[32px]">
+            <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_top_left,_rgba(255,255,255,0.14),_transparent_28%),radial-gradient(circle_at_bottom_right,_rgba(255,255,255,0.08),_transparent_22%)]" />
+            <div className="relative flex flex-col gap-6 sm:flex-row sm:items-center sm:justify-between">
+              <div className="space-y-3">
+                <div className="inline-flex items-center gap-3 rounded-full bg-white/10 border border-white/20 px-4 py-2 text-sm font-semibold uppercase tracking-[0.18em] text-white/95 shadow-[0_10px_30px_rgba(255,255,255,0.16)]">
+                  <FavoriteBadgeIcon className="text-white" />
+                  Guardados
+                </div>
+                <div>
+                  <h1 className="text-4xl font-semibold tracking-tight text-white">Favoritos</h1>
+                  <p className="mt-3 max-w-2xl text-sm leading-6 text-white/90">
+                    Tus lugares preferidos guardados localmente. Abre cualquiera en el mapa con un solo toque.
+                  </p>
+                </div>
               </div>
-              <div>
-                <h1 className="text-4xl font-semibold tracking-tight">Favoritos</h1>
-                <p className="mt-3 max-w-2xl text-sm leading-6 text-white/90">
-                  Tus lugares preferidos guardados localmente. Abre cualquiera en el mapa con un solo toque.
-                </p>
+              <div className="rounded-3xl border border-white/20 bg-white/10 px-5 py-4 text-right backdrop-blur-xl shadow-[0_24px_60px_rgba(15,23,42,0.18)]">
+                <p className="text-sm uppercase tracking-[0.18em] text-white/80">Total</p>
+                <p className="mt-2 text-3xl font-semibold text-white">{favorites.length}</p>
               </div>
-            </div>
-            <div className="rounded-3xl border border-white/30 bg-white/10 px-5 py-4 text-right backdrop-blur-sm">
-              <p className="text-sm uppercase tracking-[0.18em] text-white/80">Total</p>
-              <p className="mt-2 text-3xl font-semibold">{favorites.length}</p>
             </div>
           </div>
         </section>
